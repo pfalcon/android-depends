@@ -22,6 +22,7 @@ opt_parser = OptionParser(version = "%prog " + __VERSION__,
 opt_parser.add_option("-o", "--output", dest="output_file", default=default_database_name, help="cscope database file")
 opt_parser.add_option("-i", "--input", dest="input_file", default=default_cfg_name, help="cfg file lists all directories to be searched")
 opt_parser.add_option("-v", "--verbose", action="store_true", default=False, help="verbose output [default: %default]")
+opt_parser.add_option("-c", "--confirm", action="store_true", default=False, help="confirm overwrite existing cscope database without interaction [default: %default]")
 (cmdline_options, args) = opt_parser.parse_args()
 
 # config application behavior
@@ -39,6 +40,18 @@ else:
     for (k, v) in valid_lan_types.items():
         print "\t" + k
     sys.exit(-1)
+
+# take care of accidently overwrite existing database file
+if not cmdline_options.confirm:
+    confirm = 'n'
+    if default_database_name != cmdline_options.output_file and os.path.isfile(default_database_name):
+       confirm = raw_input(default_database_name + " already exists, overwrite it? (y/n)")
+       if confirm != "y":
+           sys.exit(0)
+    if os.path.isfile(cmdline_options.output_file):
+       confirm = raw_input(cmdline_options.output_file + " already exists, overwrite it? (y/n)")
+       if confirm != "y":
+           sys.exit(0)
 
 file_list = open(file_list_name, "w")
 # should we check more directories?
