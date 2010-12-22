@@ -26,9 +26,9 @@ opt_parser.add_option("-c", "--confirm", action="store_true", default=False, hel
 (cmdline_options, args) = opt_parser.parse_args()
 
 # config application behavior
-valid_lan_types = {"c++": ".*\.\(cpp\|c\|cxx\|cc\|h\|hpp\|hxx\)",
-    "java": ".*\.java",
-    "python": ".*\.py"}
+valid_lan_types = {"c++": ".+\.\(cpp\|c\|cxx\|cc\|h\|hpp\|hxx\)$",
+    "java": ".+\.java$",
+    "python": ".+\.py$"}
 lan_type = "c++"
 if len(args) > 0:
     lan_type = args[0]
@@ -74,9 +74,36 @@ if dirs.count(".") + dirs.count("./") < 1:
     dirs.append(".")
 
 # find source files in all directories
+def naive_find_for_win(d, pattern, file_list):
+    """
+    a naive implementation of find for windows
+    we do this for two reasons:
+    1. unix find isn't widely available on windows
+    2. even if we manually install unix find, the windows's own find take precedence over it.
+        because the CreateProcess api called by Popen will search system directory
+        first, then PATH environment variable. So, windows's own find will be executed
+    """
+    import re
+    def func(arg, dirname, fnames):
+        arg = arg + dirname + os.sep
+        for f in fnames:
+            fpath = arg+f
+            if os.path.isfile(fpath):
+                if re.match(pattern, fpath):
+                    source_files.append(fpath + "\n")
+            #    fnames.remove(f)
+    source_files = []
+    os.path.walk(d, func, "")
+    file_list.writelines(source_files)
+
 for d in dirs:
     print "find " + lan_type + " source files in " + d
-    subprocess.Popen(["find", d, "-regex", lan_pattern], stdout=file_list).wait()
+    if sys.platform != "win32":
+        subprocess.Popen(["find", d, "-iregex", lan_pattern], stdout=file_list).wait()
+    else:
+        # change lan_pattern so that it works on python
+        lan_pattern = lan_pattern.replace("\(", "(").replace("\)", ")").replace("\|", "|")
+        naive_find_for_win(d, lan_pattern, file_list)
 file_list.close()
 
 # actually generate database
