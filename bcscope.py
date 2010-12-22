@@ -11,13 +11,16 @@ import os
 from optparse import OptionParser
 
 SUCCESS = 0
+file_list_name = "cscope.files"
+default_database_name = "cscope.out"
+default_cfg_name = ".bcscope.cfg"
 
 # parse command line options
 opt_parser = OptionParser(version = "%prog " + __VERSION__, 
             description = "command line tool for generating cscope database",
-            usage = "%prog [-o file] [file type: c/java]")
-opt_parser.add_option("-o", "--output", dest="output_file", default="cscope.out", help="cscope database file")
-opt_parser.add_option("-i", "--input", dest="input_file", default=".bcscope.cfg", help="cfg file lists all directories to be searched")
+            usage = "%prog [-o file] [file type: c++(default)/python/java]")
+opt_parser.add_option("-o", "--output", dest="output_file", default=default_database_name, help="cscope database file")
+opt_parser.add_option("-i", "--input", dest="input_file", default=default_cfg_name, help="cfg file lists all directories to be searched")
 opt_parser.add_option("-v", "--verbose", action="store_true", default=False, help="verbose output [default: %default]")
 (cmdline_options, args) = opt_parser.parse_args()
 
@@ -37,17 +40,22 @@ else:
         print "\t" + k
     sys.exit(-1)
 
-file_list_name = "cscope.files"
 file_list = open(file_list_name, "w")
 # should we check more directories?
 dirs = []
 if os.path.isfile(cmdline_options.input_file):
+    if cmdline_options.verbose:
+        print "read configuration file from " + cmdline_options.input_file
     f = open(cmdline_options.input_file)
     for line in f:
         line = line.strip() # remove possible \n char
         if len(line) > 0 and not line.startswith("#"):
             line = os.path.expanduser(line)
-            dirs.append(line)
+            if os.path.isdir(line):
+                dirs.append(line)
+            elif cmdline_options.verbose:
+                print line + " is not a directory, omit it"
+
 # make sure current directory is included
 if dirs.count(".") + dirs.count("./") < 1:
     dirs.append(".")
@@ -56,10 +64,13 @@ if dirs.count(".") + dirs.count("./") < 1:
 for d in dirs:
     print "find " + lan_type + " source files in " + d
     subprocess.Popen(["find", d, "-regex", lan_pattern], stdout=file_list).wait()
+file_list.close()
+
 # actually generate database
 print "build cscope database"
 subprocess.Popen(["cscope", "-b"]).wait()
-shutil.move("cscope.out", cmdline_options.output_file)
+if cmdline_options.output_file != default_database_name:
+    shutil.move(default_database_name, cmdline_options.output_file)
 os.remove(file_list_name)
 print "done, cscope database saved in " + cmdline_options.output_file
 
