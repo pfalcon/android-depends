@@ -53,10 +53,8 @@ def attach_gdbserver(port, pid):
     attach gdbserver to target process
     """
     cmd = ["adb", "shell", "gdbserver", ":"+port, "--attach", pid]
-    print cmd
-    pr = subprocess.Popen(cmd, stdin=None, stdout=None, stderr=None)
-    
-#    os.system("adb shell gdbserver :" + port + " --attach " + pid + " &")
+#    pr = subprocess.Popen(cmd)#, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    os.system("adb shell gdbserver :" + port + " --attach " + pid + " &")
 
 def find_process_symbol(android_src_root, process_name, product_name=DEFAULT_PRODUCT_NAME):
     """
