@@ -11,19 +11,22 @@ import os
 import sys
 import re
 from optparse import OptionParser
+from threading import Thread
 
 DEFAULT_PRODUCT_NAME="generic"
+DEFAULT_DEBUGGER_NAME = "arm-eabi-gdb"
+android_src_root = ""
 
-def find_debugger(android_src_root, version=""):
+def find_debugger(version):
     """
     find android debugger
     return the latest version of all debuggers if version is not specified
     return empty string on failure
     """
-    debugger_name = "arm-eabi-gdb"
+    DEFAULT_DEBUGGER_NAME = "arm-eabi-gdb"
     debugger_path = ""
     if sys.platform.startswith("linux"):
-        debugger_pattern = ".+linux.+" + version + ".+" + debugger_name
+        debugger_pattern = ".+linux.+" + version + ".+" + DEFAULT_DEBUGGER_NAME
         p = subprocess.Popen(["find", android_src_root+os.sep+"prebuilt", "-iregex", debugger_pattern], stdout=subprocess.PIPE)
         p.wait()
     output = p.stdout.readlines()
@@ -37,7 +40,7 @@ def find_pid_of_process(process_name):
     return "0" on failure
     """
     number_pattern = "([0-9]+) +"
-    process_pattern = "[a-zA-Z_0-9]+ +("+number_pattern+") +.+"+process_name
+    process_pattern = "[a-zA-Z_0-9]+ +("+number_pattern+") +.+[./ ]"+process_name
     pid = "0"
     p = subprocess.Popen(["adb", "shell", "ps"], stdout=subprocess.PIPE)
     p.wait()
@@ -48,15 +51,27 @@ def find_pid_of_process(process_name):
             pid = m.groups()[0]
     return pid.rstrip()
 
+def kill_process(pid):
+    p = subprocess.Popen(["adb", "shell", "kill", pid])
+    p.wait()
+
 def attach_gdbserver(port, pid):
     """
     attach gdbserver to target process
     """
-    cmd = ["adb", "shell", "gdbserver", ":"+port, "--attach", pid]
-#    pr = subprocess.Popen(cmd)#, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    os.system("adb shell gdbserver :" + port + " --attach " + pid + " &")
+    class GdbserverThread(Thread):
+        def __init__(self):
+            Thread.__init__(self)
+        
+        def run(self):
+            cmd = ["adb", "shell", "gdbserver", ":"+port, "--attach", pid]
+            pr = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            #os.system("adb shell gdbserver :" + port + " --attach " + pid + " &")
 
-def find_process_symbol(android_src_root, process_name, product_name=DEFAULT_PRODUCT_NAME):
+    th = GdbserverThread()
+    th.start()
+
+def find_process_symbol(process_name, product_name):
     """
     find symbol file for process
     return empty string on failure
@@ -72,7 +87,7 @@ def find_process_symbol(android_src_root, process_name, product_name=DEFAULT_PRO
         process_symbol = output[0].rstrip()
     return process_symbol 
 
-def start_gdb_client(android_src_root, debugger, process, product_name=DEFAULT_PRODUCT_NAME, debugger_wrapper_type = "gdb"):
+def start_gdb_client(debugger, process, product_name, debugger_wrapper_type = "gdb"):
     lib_symbol_root = "%s/out/target/product/%s/symbols/system/lib"%(android_src_root, product_name)
     cmdl = '%s %s -ex "set solib-search-path %s"'%(debugger, process, lib_symbol_root)
     # run gdb under cgdb 
@@ -95,6 +110,12 @@ if __name__ == "__main__":
             help="root of android source tree, can be set via "+KEY_ANDROID_SRC_ROOT+" environment variable")
     opt_parser.add_option("-d", "--debugger-wrapper", dest="debugger_wrapper", default=debugger_wrappers[0], 
             help="wrappers on gdb, e.g., cgdb, ddd")
+    opt_parser.add_option("-k", "--kill", action="store_true", default=False, 
+            help="kill process on target [default: %default]")
+    opt_parser.add_option("", "--debugger-version", dest="debugger_version", default="", 
+            help="specify a debugger version, e.g., 4.4.0, 4.2, 4. Will use the latest version if not specified")
+    opt_parser.add_option("", "--product-name", dest="product_name", default=DEFAULT_PRODUCT_NAME, 
+            help="product name, [default: %default]")
     opt_parser.add_option("-p", "--port", dest="gdb_port", default="7890", 
             help="port used for gdbserver, [default: %default]")
     (cmdline_options, args) = opt_parser.parse_args()
@@ -105,9 +126,27 @@ if __name__ == "__main__":
     if cmdline_options.android_src_root == None or cmdline_options.android_src_root == "":
         print "android-src-root must be set"
         sys.exit(-1)
+    else:
+        android_src_root = cmdline_options.android_src_root
+    if cmdline_options.kill:
+        pid = find_pid_of_process(process_name)
+        kill_process(pid)
+        sys.exit(0)
 
-    debugger = find_debugger(cmdline_options.android_src_root)
+    debugger = find_debugger(cmdline_options.debugger_version)
+    if debugger == "":
+        print "fail to find " + DEFAULT_DEBUGGER_NAME + ". Did you build android source?"
+        sys.exit(-1)
+    print "found debugger: " + debugger
     pid = find_pid_of_process(process_name)
-    process_symbol = find_process_symbol(cmdline_options.android_src_root, process_name)
+    if pid == "0":
+        print "fail to find " + process_name + " on target."
+        sys.exit(-1)
+    process_symbol = find_process_symbol(process_name, cmdline_options.product_name)
+    if process_symbol == "":
+        print "fail to find symbol for " + process_name + ". Did you build android source?"
+        sys.exit(-1)
+    print "attach gdbserver to %s, listen on port %s"%(pid, cmdline_options.gdb_port)
     attach_gdbserver(cmdline_options.gdb_port, pid)
-    start_gdb_client(cmdline_options.android_src_root, debugger, process_symbol, debugger_wrapper_type=cmdline_options.debugger_wrapper)
+    start_gdb_client(debugger, process_symbol, cmdline_options.product_name, 
+            debugger_wrapper_type=cmdline_options.debugger_wrapper)
