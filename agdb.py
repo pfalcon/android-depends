@@ -88,8 +88,10 @@ def find_process_symbol(process_name, product_name):
     return process_symbol 
 
 def start_gdb_client(debugger, process, product_name, debugger_wrapper_type = "gdb"):
+    lib_symbol_prefix = "%s/out/target/product/%s/symbols/"%(android_src_root, product_name) 
     lib_symbol_root = "%s/out/target/product/%s/symbols/system/lib"%(android_src_root, product_name)
-    cmdl = '%s %s -ex "set solib-search-path %s"'%(debugger, process, lib_symbol_root)
+    cmdl = '%s %s -ex "set solib-absolute-prefix %s" -ex "set solib-search-path %s"'%(debugger, process, 
+            lib_symbol_prefix, lib_symbol_root)
     # run gdb under cgdb 
     if debugger_wrapper_type == "cgdb":
         cmdl = "cgdb -d " + cmdl
