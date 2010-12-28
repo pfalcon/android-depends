@@ -16,6 +16,7 @@ from threading import Thread
 DEFAULT_PRODUCT_NAME="generic"
 DEFAULT_DEBUGGER_NAME = "arm-eabi-gdb"
 android_src_root = ""
+adb_cmds = ["adb"]
 
 def find_debugger(version):
     """
@@ -42,7 +43,8 @@ def find_pid_of_process(process_name):
     number_pattern = "([0-9]+) +"
     process_pattern = "[a-zA-Z_0-9]+ +("+number_pattern+") +.+[./ ]"+process_name
     pid = "0"
-    p = subprocess.Popen(["adb", "shell", "ps"], stdout=subprocess.PIPE)
+
+    p = subprocess.Popen(adb_cmds + ["shell", "ps"], stdout=subprocess.PIPE)
     p.wait()
     output = p.stdout.readlines()
     for l in output:
@@ -52,7 +54,7 @@ def find_pid_of_process(process_name):
     return pid.rstrip()
 
 def kill_process(pid):
-    p = subprocess.Popen(["adb", "shell", "kill", pid])
+    p = subprocess.Popen(adb_cmds + ["shell", "kill", pid])
     p.wait()
 
 def attach_gdbserver(port, pid):
@@ -64,7 +66,7 @@ def attach_gdbserver(port, pid):
             Thread.__init__(self)
         
         def run(self):
-            cmd = ["adb", "shell", "gdbserver", ":"+port, "--attach", pid]
+            cmd = adb_cmds + ["shell", "gdbserver", ":"+port, "--attach", pid]
             pr = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             #os.system("adb shell gdbserver :" + port + " --attach " + pid + " &")
 
@@ -120,6 +122,8 @@ if __name__ == "__main__":
             help="product name, [default: %default]")
     opt_parser.add_option("-p", "--port", dest="gdb_port", default="7890", 
             help="port used for gdbserver, [default: %default]")
+    opt_parser.add_option("-s", "", dest="serial_number", default="", 
+            help="direct commands to device with given serial number.")
     (cmdline_options, args) = opt_parser.parse_args()
     if len(args) < 1:
         print "must specify process name"
@@ -130,25 +134,39 @@ if __name__ == "__main__":
         sys.exit(-1)
     else:
         android_src_root = cmdline_options.android_src_root
+
+    if cmdline_options.serial_number != "":
+        adb_cmds += ["-s", cmdline_options.serial_number]
+
     if cmdline_options.kill:
         pid = find_pid_of_process(process_name)
-        kill_process(pid)
+        if pid != "0":
+            kill_process(pid)
+            print "killed "+process_name+ ", pid is: " + pid 
+        else:
+            print process_name + " not found  on target."
         sys.exit(0)
+
+    pid = find_pid_of_process(process_name)
+    if pid == "0":
+        print process_name + " not found  on target."
+        sys.exit(-1)
+    print "found "+process_name+ ", pid is: " + pid 
 
     debugger = find_debugger(cmdline_options.debugger_version)
     if debugger == "":
         print "fail to find " + DEFAULT_DEBUGGER_NAME + ". Did you build android source?"
         sys.exit(-1)
     print "found debugger: " + debugger
-    pid = find_pid_of_process(process_name)
-    if pid == "0":
-        print "fail to find " + process_name + " on target."
-        sys.exit(-1)
+
     process_symbol = find_process_symbol(process_name, cmdline_options.product_name)
     if process_symbol == "":
         print "fail to find symbol for " + process_name + ". Did you build android source?"
         sys.exit(-1)
-    print "attach gdbserver to %s, listen on port %s"%(pid, cmdline_options.gdb_port)
+    print "found symbol: " + process_symbol 
+
     attach_gdbserver(cmdline_options.gdb_port, pid)
+    print "attach gdbserver to %s, listen on port %s"%(pid, cmdline_options.gdb_port)
+
     start_gdb_client(debugger, process_symbol, cmdline_options.product_name, 
             debugger_wrapper_type=cmdline_options.debugger_wrapper)
