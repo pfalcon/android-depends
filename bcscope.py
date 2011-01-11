@@ -125,6 +125,6 @@ print "build cscope database"
 subprocess.Popen(["cscope", "-b"]).wait()
 if cmdline_options.output_file != default_database_name:
     shutil.move(default_database_name, cmdline_options.output_file)
-#os.remove(file_list_name)
+os.remove(file_list_name)
 print "done, cscope database saved in " + cmdline_options.output_file
 
