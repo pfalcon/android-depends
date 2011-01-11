@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-__VERSION__ = '1.0.0'
+__VERSION__ = '1.0.1'
 __author__ = 'rx.wen218@gmail.com'
 
 import subprocess
@@ -21,6 +21,7 @@ opt_parser = OptionParser(version = "%prog " + __VERSION__,
             usage = "%prog [-o file] [file type: c++(default)/python/java]")
 opt_parser.add_option("-o", "--output", dest="output_file", default=default_database_name, help="cscope database file")
 opt_parser.add_option("-i", "--input", dest="input_file", default=default_cfg_name, help="cfg file lists all directories to be searched")
+opt_parser.add_option("-r", "--recursive", action="store_true", default=False, help="recursivly include input_file contained in all directories [default: %default]")
 opt_parser.add_option("-v", "--verbose", action="store_true", default=False, help="verbose output [default: %default]")
 opt_parser.add_option("-a", "--absolute", action="store_true", default=False, help="generate cscope database with absolute path [default: %default]")
 opt_parser.add_option("-c", "--confirm", action="store_true", default=False, help="confirm overwrite existing cscope database without interaction [default: %default]")
@@ -57,22 +58,23 @@ if not cmdline_options.confirm:
 file_list = open(file_list_name, "w")
 # should we check more directories?
 dirs = []
-if os.path.isfile(cmdline_options.input_file):
-    if cmdline_options.verbose:
-        print "read configuration file from " + cmdline_options.input_file
-    f = open(cmdline_options.input_file)
-    for line in f:
-        line = line.strip() # remove possible \n char
-        if len(line) > 0 and not line.startswith("#"):
-            line = os.path.expanduser(line)
-            if os.path.isdir(line):
-                dirs.append(line)
-            elif cmdline_options.verbose:
-                print line + " is not a directory, omit it"
+def include_dirs_from_cfg(cfg_file, search_dirs):
+    if os.path.isfile(cfg_file):
+        if cmdline_options.verbose:
+            print "read configuration file from " + cfg_file
+        f = open(cfg_file)
+        for line in f:
+            line = line.strip() # remove possible \n char
+            if len(line) > 0 and not line.startswith("#"):
+                line = os.path.expanduser(line)
+                if os.path.isdir(line):
+                    if search_dirs.count(line) == 0:
+                        search_dirs.append(line)
+                elif cmdline_options.verbose:
+                    print line + " is not a directory, omit it"
+        f.close()
 
-# make sure current directory is included
-if dirs.count(".") + dirs.count("./") < 1:
-    dirs.append(".")
+include_dirs_from_cfg(cmdline_options.input_file, dirs)
 
 # find source files in all directories
 def naive_find_for_win(d, pattern, file_list):
@@ -97,6 +99,15 @@ def naive_find_for_win(d, pattern, file_list):
     os.path.walk(d, func, "")
     file_list.writelines(source_files)
 
+if cmdline_options.recursive:
+# include cfg files in other directories
+    for d in dirs:
+        include_dirs_from_cfg(d+os.path.sep+cmdline_options.input_file, dirs)
+
+# make sure current directory is included
+if dirs.count(".") + dirs.count("./") < 1:
+    dirs.insert(0, ".")
+
 for d in dirs:
     if cmdline_options.absolute:
         d = os.path.abspath(d) + os.path.sep
@@ -114,6 +125,6 @@ print "build cscope database"
 subprocess.Popen(["cscope", "-b"]).wait()
 if cmdline_options.output_file != default_database_name:
     shutil.move(default_database_name, cmdline_options.output_file)
-os.remove(file_list_name)
+#os.remove(file_list_name)
 print "done, cscope database saved in " + cmdline_options.output_file
 
