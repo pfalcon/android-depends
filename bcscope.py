@@ -22,6 +22,7 @@ opt_parser = OptionParser(version = "%prog " + __VERSION__,
 opt_parser.add_option("-o", "--output", dest="output_file", default=default_database_name, help="cscope database file")
 opt_parser.add_option("-i", "--input", dest="input_file", default=default_cfg_name, help="cfg file lists all directories to be searched")
 opt_parser.add_option("-v", "--verbose", action="store_true", default=False, help="verbose output [default: %default]")
+opt_parser.add_option("-a", "--absolute", action="store_true", default=False, help="generate cscope database with absolute path [default: %default]")
 opt_parser.add_option("-c", "--confirm", action="store_true", default=False, help="confirm overwrite existing cscope database without interaction [default: %default]")
 (cmdline_options, args) = opt_parser.parse_args()
 
@@ -97,6 +98,8 @@ def naive_find_for_win(d, pattern, file_list):
     file_list.writelines(source_files)
 
 for d in dirs:
+    if cmdline_options.absolute:
+        d = os.path.abspath(d) + os.path.sep
     print "find " + lan_type + " source files in " + d
     if sys.platform != "win32":
         subprocess.Popen(["find", d, "-iregex", lan_pattern], stdout=file_list).wait()
