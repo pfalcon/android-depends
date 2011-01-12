@@ -13,6 +13,8 @@ from optparse import OptionParser
 SUCCESS = 0
 file_list_name = "cscope.files"
 default_database_name = "cscope.out"
+default_database_name_in = "cscope.in.out"
+default_database_name_po = "cscope.po.out"
 default_cfg_name = ".bcscope.cfg"
 
 # parse command line options
@@ -29,6 +31,10 @@ opt_parser.add_option("-v", "--verbose", action="store_true", default=False,
         help="verbose output [default: %default]")
 opt_parser.add_option("-a", "--absolute", action="store_true", default=False, 
         help="generate cscope database with absolute path [default: %default]")
+opt_parser.add_option("-k", "--kernel", action="store_true", default=False, 
+        help="Kernel Mode - don't use /usr/include for #include files. [default: %default]")
+opt_parser.add_option("-q", "--quick", action="store_true", default=False, 
+        help="Build an inverted index for quick symbol searching. [default: %default]")
 opt_parser.add_option("-c", "--confirm", action="store_true", default=False, 
         help="confirm overwrite existing cscope database without interaction [default: %default]")
 (cmdline_options, args) = opt_parser.parse_args()
@@ -131,9 +137,18 @@ file_list.close()
 
 # actually generate database
 print "build cscope database"
-subprocess.Popen(["cscope", "-b"]).wait()
+cmd = ["cscope", "-b"]
+if cmdline_options.quick:
+    cmd.append("-q")
+if cmdline_options.kernel:
+    cmd.append("-k")
+subprocess.Popen(cmd).wait()
 if cmdline_options.output_file != default_database_name:
     shutil.move(default_database_name, cmdline_options.output_file)
+    if os.path.isfile(default_database_name_in):
+        shutil.move(default_database_name_in, cmdline_options.output_file+".in")
+    if os.path.isfile(default_database_name_po):
+        shutil.move(default_database_name_po, cmdline_options.output_file+".po")
 os.remove(file_list_name)
 print "done, cscope database saved in " + cmdline_options.output_file
 
