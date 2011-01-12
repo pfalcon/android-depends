@@ -19,12 +19,18 @@ default_cfg_name = ".bcscope.cfg"
 opt_parser = OptionParser(version = "%prog " + __VERSION__, 
             description = "command line tool for generating cscope database",
             usage = "%prog [-o file] [file type: c++(default)/python/java]")
-opt_parser.add_option("-o", "--output", dest="output_file", default=default_database_name, help="cscope database file")
-opt_parser.add_option("-i", "--input", dest="input_file", default=default_cfg_name, help="cfg file lists all directories to be searched")
-opt_parser.add_option("-r", "--recursive", action="store_true", default=False, help="recursivly include input_file contained in all directories [default: %default]")
-opt_parser.add_option("-v", "--verbose", action="store_true", default=False, help="verbose output [default: %default]")
-opt_parser.add_option("-a", "--absolute", action="store_true", default=False, help="generate cscope database with absolute path [default: %default]")
-opt_parser.add_option("-c", "--confirm", action="store_true", default=False, help="confirm overwrite existing cscope database without interaction [default: %default]")
+opt_parser.add_option("-o", "--output", dest="output_file", default=default_database_name, 
+        help="cscope database file")
+opt_parser.add_option("-i", "--input", dest="input_file", default=default_cfg_name, 
+        help="cfg file lists all directories to be searched")
+opt_parser.add_option("-r", "--recursive", action="store_true", default=False, 
+        help="recursivly include input_file contained in all directories [default: %default]")
+opt_parser.add_option("-v", "--verbose", action="store_true", default=False, 
+        help="verbose output [default: %default]")
+opt_parser.add_option("-a", "--absolute", action="store_true", default=False, 
+        help="generate cscope database with absolute path [default: %default]")
+opt_parser.add_option("-c", "--confirm", action="store_true", default=False, 
+        help="confirm overwrite existing cscope database without interaction [default: %default]")
 (cmdline_options, args) = opt_parser.parse_args()
 
 # config application behavior
@@ -58,7 +64,8 @@ if not cmdline_options.confirm:
 file_list = open(file_list_name, "w")
 # should we check more directories?
 dirs = []
-def include_dirs_from_cfg(cfg_file, search_dirs):
+def include_dirs_from_cfg(dir_path, cfg_name, search_dirs):
+    cfg_file = os.path.join(dir_path, cfg_name)
     if os.path.isfile(cfg_file):
         if cmdline_options.verbose:
             print "read configuration file from " + cfg_file
@@ -66,6 +73,8 @@ def include_dirs_from_cfg(cfg_file, search_dirs):
         for line in f:
             line = line.strip() # remove possible \n char
             if len(line) > 0 and not line.startswith("#"):
+                # the line is relative to dir_path, join them so line is relative to current dir
+                line = os.path.join(dir_path, line)
                 line = os.path.expanduser(line)
                 if os.path.isdir(line):
                     if search_dirs.count(line) == 0:
@@ -74,7 +83,7 @@ def include_dirs_from_cfg(cfg_file, search_dirs):
                     print line + " is not a directory, omit it"
         f.close()
 
-include_dirs_from_cfg(cmdline_options.input_file, dirs)
+include_dirs_from_cfg("./", cmdline_options.input_file, dirs)
 
 # find source files in all directories
 def naive_find_for_win(d, pattern, file_list):
@@ -102,7 +111,7 @@ def naive_find_for_win(d, pattern, file_list):
 if cmdline_options.recursive:
 # include cfg files in other directories
     for d in dirs:
-        include_dirs_from_cfg(d+os.path.sep+cmdline_options.input_file, dirs)
+        include_dirs_from_cfg(d, cmdline_options.input_file, dirs)
 
 # make sure current directory is included
 if dirs.count(".") + dirs.count("./") < 1:
@@ -110,7 +119,7 @@ if dirs.count(".") + dirs.count("./") < 1:
 
 for d in dirs:
     if cmdline_options.absolute:
-        d = os.path.abspath(d) + os.path.sep
+        d = os.path.abspath(d)
     print "find " + lan_type + " source files in " + d
     if sys.platform != "win32":
         subprocess.Popen(["find", d, "-iregex", lan_pattern], stdout=file_list).wait()
