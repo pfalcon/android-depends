@@ -48,6 +48,10 @@ def find_pid_of_process(process_name):
     p = subprocess.Popen(adb_cmds + ["shell", "ps"], stdout=subprocess.PIPE)
     p.wait()
     output = p.stdout.readlines()
+    # output format of ps command:
+    # USER     PID   PPID  VSIZE  RSS     WCHAN    PC         NAME
+    # media     33    1     18960  2584  ffffffff afd0b6fc S /system/bin/mediaserver
+    # ...
     for l in output:
         m = re.match(process_pattern, l)
         if m:
