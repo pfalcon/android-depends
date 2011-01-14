@@ -15,9 +15,26 @@ from threading import Thread
 
 DEFAULT_PRODUCT_NAME="generic"
 DEFAULT_DEBUGGER_NAME = "arm-eabi-gdb"
+DEFAULT_ADDR2LINE_NAME = "arm-eabi-addr2line"
 DEFAULT_FILE_LOCATION = "/system/bin/"
 android_src_root = ""
 adb_cmds = ["adb"]
+
+def find_addr2line(version):
+    """
+    find android debugger
+    return the latest version of all debuggers if version is not specified
+    return empty string on failure
+    """
+    tool_path = ""
+    if sys.platform.startswith("linux"):
+        debugger_pattern = ".+linux.+" + version + ".+" + DEFAULT_ADDR2LINE_NAME
+        p = subprocess.Popen(["find", android_src_root+os.sep+"prebuilt", "-iregex", debugger_pattern], stdout=subprocess.PIPE)
+        p.wait()
+    output = p.stdout.readlines()
+    if len(output) > 0:
+        tool_path = output[len(output)-1].rstrip()
+    return tool_path
 
 def find_debugger(version):
     """
@@ -25,7 +42,6 @@ def find_debugger(version):
     return the latest version of all debuggers if version is not specified
     return empty string on failure
     """
-    DEFAULT_DEBUGGER_NAME = "arm-eabi-gdb"
     debugger_path = ""
     if sys.platform.startswith("linux"):
         debugger_pattern = ".+linux.+" + version + ".+" + DEFAULT_DEBUGGER_NAME
@@ -133,43 +149,11 @@ def start_gdb_client(debugger, process, product_name, debugger_wrapper_type = "g
         cmdl = "cgdb -d " + cmdl
     os.system(cmdl)
 
-if __name__ == "__main__":
-    debugger_wrappers = ["gdb", "cgdb", "ddd"]
-    KEY_ANDROID_SRC_ROOT = "ANDROID_SRC_ROOT"
-    default_android_src_root = ""
-    if os.environ.has_key(KEY_ANDROID_SRC_ROOT):
-        default_android_src_root = os.environ[KEY_ANDROID_SRC_ROOT]
-
-    # parse command line options
-    opt_parser = OptionParser(version = "%prog " + __VERSION__, 
-                description = "wrapper on android gdb",
-                usage = "%prog [options] process_name")
-    opt_parser.add_option("", "--android-src-root", dest="android_src_root", default=default_android_src_root, 
-            help="root of android source tree, can be set via "+KEY_ANDROID_SRC_ROOT+" environment variable")
-    opt_parser.add_option("-d", "--debugger-wrapper", dest="debugger_wrapper", default=debugger_wrappers[0], 
-            help="wrappers on gdb, e.g., cgdb, ddd")
-    opt_parser.add_option("-k", "--kill", action="store_true", default=False, 
-            help="kill process on target [default: %default]")
-    opt_parser.add_option("", "--debugger-version", dest="debugger_version", default="", 
-            help="specify a debugger version, e.g., 4.4.0, 4.2, 4. Will use the latest version if not specified")
-    opt_parser.add_option("", "--product-name", dest="product_name", default=DEFAULT_PRODUCT_NAME, 
-            help="product name, [default: %default]")
-    opt_parser.add_option("-l", "--location", dest="file_location", default=DEFAULT_FILE_LOCATION, 
-            help="the directory to search for process file on target, [default: %default]")
-    opt_parser.add_option("-p", "--port", dest="gdb_port", default="7890", 
-            help="port used for gdbserver, [default: %default]")
-    opt_parser.add_option("-s", "", dest="serial_number", default="", 
-            help="direct commands to device with given serial number.")
-    (cmdline_options, args) = opt_parser.parse_args()
+def perform_debugging(cmdline_options, args):
     if len(args) < 1:
         print "must specify process name"
         sys.exit(-1)
     process_name = args[0]
-    if cmdline_options.android_src_root == None or cmdline_options.android_src_root == "":
-        print "android-src-root must be set"
-        sys.exit(-1)
-    else:
-        android_src_root = cmdline_options.android_src_root
 
     if cmdline_options.serial_number != "":
         adb_cmds += ["-s", cmdline_options.serial_number]
@@ -213,3 +197,80 @@ if __name__ == "__main__":
 
     start_gdb_client(debugger, process_symbol, cmdline_options.product_name, 
             debugger_wrapper_type=cmdline_options.debugger_wrapper)
+
+def perform_addr_conversion(cmdline_options, args):
+    if len(args) < 1:
+        print "must specify address"
+        sys.exit(-1)
+    address = args[0]
+    symbol_name = cmdline_options.symbol_file_name
+    if symbol_name == "":
+        print "you must sepcify symbol file name "
+        sys.exit(-1)
+    symbol_path = find_process_symbol(symbol_name, cmdline_options.product_name)
+    if symbol_path == "":
+        print "fail to find symbol file " + symbol_path
+        sys.exit(-1)
+    addr2line_path = find_addr2line(cmdline_options.debugger_version)
+    if addr2line_path == "":
+        print "fail to find " + DEFAULT_ADDR2LINE_NAME
+        sys.exit(-1)
+    cmd = [addr2line_path, "-e", symbol_path, address]
+    if cmdline_options.functions:
+        cmd.append("-f")
+    if cmdline_options.basenames:
+        cmd.append("-s")
+    if cmdline_options.demangle:
+        cmd.append("-C")
+    p = subprocess.Popen(cmd)
+    p.wait()
+
+if __name__ == "__main__":
+    debugger_wrappers = ["gdb", "cgdb", "ddd"]
+    KEY_ANDROID_SRC_ROOT = "ANDROID_SRC_ROOT"
+    default_android_src_root = ""
+    if os.environ.has_key(KEY_ANDROID_SRC_ROOT):
+        default_android_src_root = os.environ[KEY_ANDROID_SRC_ROOT]
+
+    # parse command line options
+    opt_parser = OptionParser(version = "%prog " + __VERSION__, 
+                description = "wrapper on android gdb",
+                usage = "%prog [options] process_name")
+    opt_parser.add_option("", "--android-src-root", dest="android_src_root", default=default_android_src_root, 
+            help="root of android source tree, can be set via "+KEY_ANDROID_SRC_ROOT+" environment variable")
+    opt_parser.add_option("-d", "--debugger-wrapper", dest="debugger_wrapper", default=debugger_wrappers[0], 
+            help="wrappers on gdb, e.g., cgdb, ddd")
+    opt_parser.add_option("-k", "--kill", action="store_true", default=False, 
+            help="kill process on target [default: %default]")
+    opt_parser.add_option("", "--debugger-version", dest="debugger_version", default="", 
+            help="specify a debugger version, e.g., 4.4.0, 4.2, 4. Will use the latest version if not specified")
+    opt_parser.add_option("", "--product-name", dest="product_name", default=DEFAULT_PRODUCT_NAME, 
+            help="product name, [default: %default]")
+    opt_parser.add_option("-l", "--location", dest="file_location", default=DEFAULT_FILE_LOCATION, 
+            help="the directory to search for process file on target, [default: %default]")
+    opt_parser.add_option("-p", "--port", dest="gdb_port", default="7890", 
+            help="port used for gdbserver, [default: %default]")
+    opt_parser.add_option("-s", "", dest="serial_number", default="", 
+            help="direct commands to device with given serial number.")
+    opt_parser.add_option("-r", "--resolve", action="store_true", default=False, 
+            help="[addr2line] resolve address to file names and line numbers [default: %default]")
+    opt_parser.add_option("-e", "--symbol-file", dest="symbol_file_name", default="a.out", 
+            help="[addr2line] specify the name of the executable for which addresses should be translated. [default: %default]")
+    opt_parser.add_option("-f", "--functions", action="store_true", default=True, 
+            help="[addr2line] show function names [default: %default]")
+    opt_parser.add_option("-C", "--demangle", action="store_true", default=False, 
+            help="[addr2line] demangle function names [default: %default]")
+    opt_parser.add_option("-S", "--basenames", action="store_true", default=False, 
+            help="[addr2line] demangle function names [default: %default]")
+    (cmdline_options, args) = opt_parser.parse_args()
+
+    if cmdline_options.android_src_root == None or cmdline_options.android_src_root == "":
+        print "android-src-root must be set"
+        sys.exit(-1)
+    else:
+        android_src_root = cmdline_options.android_src_root
+    
+    if cmdline_options.resolve:
+        perform_addr_conversion(cmdline_options, args)
+    else:
+        perform_debugging(cmdline_options, args)
