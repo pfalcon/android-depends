@@ -242,8 +242,8 @@ if __name__ == "__main__":
             help="wrappers on gdb, e.g., cgdb, ddd")
     opt_parser.add_option("-k", "--kill", action="store_true", default=False, 
             help="kill process on target [default: %default]")
-    opt_parser.add_option("", "--debugger-version", dest="debugger_version", default="", 
-            help="specify a debugger version, e.g., 4.4.0, 4.2, 4. Will use the latest version if not specified")
+    opt_parser.add_option("", "--debugger-version", dest="debugger_version", default="4.4.0", 
+            help="specify a debugger version, e.g., 4.4.0, 4.2, 4. Will use %default if not specified")
     opt_parser.add_option("", "--product-name", dest="product_name", default=DEFAULT_PRODUCT_NAME, 
             help="product name, [default: %default]")
     opt_parser.add_option("-l", "--location", dest="file_location", default=DEFAULT_FILE_LOCATION, 
