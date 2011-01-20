@@ -90,13 +90,13 @@ def find_file_on_device(file_name, path):
             file_path = path + "/" + m.groups()[0]
     return file_path
 
-def start_target_process(port, file_name):
+def start_target_process(port, file_name, args):
     class GdbserverProcessThread(Thread):
         def __init__(self):
             Thread.__init__(self)
         
         def run(self):
-            cmd = adb_cmds + ["shell", "gdbserver", ":"+port, file_name]
+            cmd = adb_cmds + ["shell", "gdbserver", ":"+port, file_name] + args.split()
             pr = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             #os.system("adb shell gdbserver :" + port + " --attach " + pid + " &")
 
@@ -188,12 +188,13 @@ def perform_debugging(cmdline_options, args):
             sys.exit(-1)
         else:
             print "found "+process_name+ ", file path is: " + file_name 
-            start_target_process(cmdline_options.gdb_port, file_name)
+            start_target_process(cmdline_options.gdb_port, file_name, cmdline_options.program_args)
             print "start %s under gdbserver, listen on port %s"%(file_name, cmdline_options.gdb_port)
     else:
         print "found "+process_name+ ", pid is: " + pid 
         attach_gdbserver(cmdline_options.gdb_port, pid)
         print "attach gdbserver to %s, listen on port %s"%(pid, cmdline_options.gdb_port)
+#    return
 
     start_gdb_client(debugger, process_symbol, cmdline_options.product_name, 
             debugger_wrapper_type=cmdline_options.debugger_wrapper)
@@ -246,6 +247,8 @@ if __name__ == "__main__":
             help="specify a debugger version, e.g., 4.4.0, 4.2, 4. Will use %default if not specified")
     opt_parser.add_option("", "--product-name", dest="product_name", default=DEFAULT_PRODUCT_NAME, 
             help="product name, [default: %default]")
+    opt_parser.add_option("", "--program-args", dest="program_args", default="", 
+            help="arguments passed to debugee, [default: %default]")
     opt_parser.add_option("-l", "--location", dest="file_location", default=DEFAULT_FILE_LOCATION, 
             help="the directory to search for process file on target, [default: %default]")
     opt_parser.add_option("-p", "--port", dest="gdb_port", default="7890", 
