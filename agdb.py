@@ -104,7 +104,7 @@ def start_target_process(port, file_name):
     th.start()
 
 def kill_process(pid):
-    p = subprocess.Popen(adb_cmds + ["shell", "kill", pid])
+    p = subprocess.Popen(adb_cmds + ["shell", "kill", "-9", pid])
     p.wait()
 
 def attach_gdbserver(port, pid):
