@@ -142,8 +142,11 @@ def find_process_symbol(process_name, product_name):
 def start_gdb_client(debugger, process, product_name, debugger_wrapper_type = "gdb"):
     lib_symbol_prefix = "%s/out/target/product/%s/symbols/"%(android_src_root, product_name) 
     lib_symbol_root = "%s/out/target/product/%s/symbols/system/lib"%(android_src_root, product_name)
-    cmdl = '%s %s -ex "set solib-absolute-prefix %s" -ex "set solib-search-path %s"'%(debugger, process, 
-            lib_symbol_prefix, lib_symbol_root)
+    solib_abs_cmd = "set solib-absolute-prefix " + lib_symbol_prefix
+    solib_sch_cmd = "set solib-search-path " + lib_symbol_root
+    print solib_abs_cmd
+    print solib_sch_cmd
+    cmdl = '%s %s -ex "%s" -ex "%s"'%(debugger, process, solib_abs_cmd, solib_sch_cmd)
     # run gdb under cgdb 
     if debugger_wrapper_type == "cgdb":
         cmdl = "cgdb -d " + cmdl
@@ -173,9 +176,13 @@ def perform_debugging(cmdline_options, args):
         sys.exit(-1)
     print "found debugger: " + debugger
 
-    process_symbol = find_process_symbol(process_name, cmdline_options.product_name)
+    process_symbol_name = process_name
+    if cmdline_options.dalvik:
+        process_symbol_name = "app_process"
+
+    process_symbol = find_process_symbol(process_symbol_name, cmdline_options.product_name)
     if process_symbol == "":
-        print "fail to find symbol for " + process_name + ". Did you build android source?"
+        print "fail to find symbol for " + process_symbol_name + ". Did you build android source?"
         sys.exit(-1)
     print "found symbol: " + process_symbol 
 
@@ -194,7 +201,6 @@ def perform_debugging(cmdline_options, args):
         print "found "+process_name+ ", pid is: " + pid 
         attach_gdbserver(cmdline_options.gdb_port, pid)
         print "attach gdbserver to %s, listen on port %s"%(pid, cmdline_options.gdb_port)
-#    return
 
     start_gdb_client(debugger, process_symbol, cmdline_options.product_name, 
             debugger_wrapper_type=cmdline_options.debugger_wrapper)
@@ -241,6 +247,8 @@ if __name__ == "__main__":
             help="root of android source tree, can be set via "+KEY_ANDROID_SRC_ROOT+" environment variable")
     opt_parser.add_option("-d", "--debugger-wrapper", dest="debugger_wrapper", default=debugger_wrappers[0], 
             help="wrappers on gdb, e.g., cgdb, ddd")
+    opt_parser.add_option("", "--dalvik", action="store_true", default=False, 
+            help="debugee is dalvik(java) application [default: %default]")
     opt_parser.add_option("-k", "--kill", action="store_true", default=False, 
             help="kill process on target [default: %default]")
     opt_parser.add_option("", "--debugger-version", dest="debugger_version", default="4.4.0", 
