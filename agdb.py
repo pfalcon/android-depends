@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-__VERSION__ = '1.0.0'
+__VERSION__ = '1.0.1'
 __author__ = 'rx.wen218@gmail.com'
 """
 android cross platform gdb wrapper
@@ -20,6 +20,12 @@ DEFAULT_FILE_LOCATION = "/system/bin/"
 android_src_root = ""
 adb_cmds = ["adb"]
 
+def get_process_output(cmd):
+    p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+    p.wait()
+    output = p.stdout.readlines()
+    return output
+
 def find_addr2line(version):
     """
     find android debugger
@@ -29,9 +35,7 @@ def find_addr2line(version):
     tool_path = ""
     if sys.platform.startswith("linux"):
         debugger_pattern = ".+linux.+" + version + ".+" + DEFAULT_ADDR2LINE_NAME
-        p = subprocess.Popen(["find", android_src_root+os.sep+"prebuilt", "-iregex", debugger_pattern], stdout=subprocess.PIPE)
-        p.wait()
-    output = p.stdout.readlines()
+        output = get_process_output(["find", android_src_root+os.sep+"prebuilt", "-iregex", debugger_pattern])
     if len(output) > 0:
         tool_path = output[len(output)-1].rstrip()
     return tool_path
@@ -205,23 +209,7 @@ def perform_debugging(cmdline_options, args):
     start_gdb_client(debugger, process_symbol, cmdline_options.product_name, 
             debugger_wrapper_type=cmdline_options.debugger_wrapper)
 
-def perform_addr_conversion(cmdline_options, args):
-    if len(args) < 1:
-        print "must specify address"
-        sys.exit(-1)
-    address = args[0]
-    symbol_name = cmdline_options.symbol_file_name
-    if symbol_name == "":
-        print "you must sepcify symbol file name "
-        sys.exit(-1)
-    symbol_path = find_process_symbol(symbol_name, cmdline_options.product_name)
-    if symbol_path == "":
-        print "fail to find symbol file " + symbol_path
-        sys.exit(-1)
-    addr2line_path = find_addr2line(cmdline_options.debugger_version)
-    if addr2line_path == "":
-        print "fail to find " + DEFAULT_ADDR2LINE_NAME
-        sys.exit(-1)
+def get_addr2line_cmd(cmdline_options, addr2line_path, symbol_path, address):
     cmd = [addr2line_path, "-e", symbol_path, address]
     if cmdline_options.functions:
         cmd.append("-f")
@@ -229,8 +217,43 @@ def perform_addr_conversion(cmdline_options, args):
         cmd.append("-s")
     if cmdline_options.demangle:
         cmd.append("-C")
-    p = subprocess.Popen(cmd)
-    p.wait()
+    return cmd
+
+def perform_addr_conversion(cmdline_options, args):
+    addr2line_path = find_addr2line(cmdline_options.debugger_version)
+    if addr2line_path == "":
+        print "fail to find " + DEFAULT_ADDR2LINE_NAME
+        sys.exit(-1)
+    
+    if len(args) < 1:
+        hex_number_pattern = " +"
+        stacktrace_pattern = ".+(#[0-9]+).+ pc +([0-9a-f]+) +(.+)"
+        for line in sys.stdin:
+            print line.rstrip()
+            m = re.match(stacktrace_pattern, line)
+            if m:
+                symbol_name = m.groups()[2]
+                symbol_path = find_process_symbol(symbol_name, cmdline_options.product_name)
+                if symbol_path == "":
+                    print "fail to find symbol file " + symbol_path
+                    sys.exit(-1)
+
+                address = m.groups()[1]
+                index = m.groups()[0]
+                cmd = get_addr2line_cmd(cmdline_options, addr2line_path, symbol_path, address)
+                output = get_process_output(cmd)
+                if len(output) == 2:
+                    print "%s%s %s: %s"%(" "*28, index, output[0].rstrip(), output[1].rstrip())
+    else:
+        address = args[0]
+        symbol_name = cmdline_options.symbol_file_name
+        symbol_path = find_process_symbol(symbol_name, cmdline_options.product_name)
+        if symbol_path == "":
+            print "fail to find symbol file " + symbol_path
+            sys.exit(-1)
+        cmd = get_addr2line_cmd(cmdline_options, addr2line_path, symbol_path, address)
+        p = subprocess.Popen(cmd)
+        p.wait()
 
 if __name__ == "__main__":
     debugger_wrappers = ["gdb", "cgdb", "ddd"]
