@@ -232,7 +232,7 @@ def perform_addr_conversion(cmdline_options, args):
             print line.rstrip()
             m = re.match(stacktrace_pattern, line)
             if m:
-                symbol_name = m.groups()[2]
+                symbol_name = os.path.basename(m.groups()[2].rstrip())
                 symbol_path = find_process_symbol(symbol_name, cmdline_options.product_name)
                 if symbol_path == "":
                     print "fail to find symbol file " + symbol_path
