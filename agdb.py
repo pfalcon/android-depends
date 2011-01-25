@@ -227,7 +227,7 @@ def perform_addr_conversion(cmdline_options, args):
     
     if len(args) < 1:
         hex_number_pattern = " +"
-        stacktrace_pattern = ".+(#[0-9]+).+ pc +([0-9a-f]+) +(.+)"
+        stacktrace_pattern = "^(.+#[0-9]+.+ )pc +([0-9a-f]+) +(.+)"
         for line in sys.stdin:
             print line.rstrip()
             m = re.match(stacktrace_pattern, line)
@@ -239,11 +239,11 @@ def perform_addr_conversion(cmdline_options, args):
                     sys.exit(-1)
 
                 address = m.groups()[1]
-                index = m.groups()[0]
+                prefix = m.groups()[0]
                 cmd = get_addr2line_cmd(cmdline_options, addr2line_path, symbol_path, address)
                 output = get_process_output(cmd)
                 if len(output) == 2:
-                    print "%s%s %s: %s"%(" "*28, index, output[0].rstrip(), output[1].rstrip())
+                    print "%s%s: %s"%(prefix, output[0].rstrip(), output[1].rstrip())
     else:
         address = args[0]
         symbol_name = cmdline_options.symbol_file_name
