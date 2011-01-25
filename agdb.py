@@ -235,8 +235,8 @@ def perform_addr_conversion(cmdline_options, args):
                 symbol_name = os.path.basename(m.groups()[2].rstrip())
                 symbol_path = find_process_symbol(symbol_name, cmdline_options.product_name)
                 if symbol_path == "":
-                    print "fail to find symbol file " + symbol_path
-                    sys.exit(-1)
+                    print "fail to find symbol file for " + symbol_name
+                    continue
 
                 address = m.groups()[1]
                 prefix = m.groups()[0]
