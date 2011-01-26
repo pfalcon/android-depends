@@ -266,7 +266,10 @@ if __name__ == "__main__":
     # parse command line options
     opt_parser = OptionParser(version = "%prog " + __VERSION__, 
                 description = "wrapper on android gdb",
-                usage = "%prog [options] process_name")
+                usage = "\n\tdebug native application:    %prog [options] process_name\n"
+                + "\tdebug dalvik application:    %prog [options] --dalvik process_name\n"
+                + "\tconvert address to file name and line number:    %prog [options] -r -e symbol_name address\n"
+                + "\tconvert call stack to file names and line numbers:    (adb logcat OR cat tombstone_file) | %prog [options] -r")
     opt_parser.add_option("", "--android-src-root", dest="android_src_root", default=default_android_src_root, 
             help="root of android source tree, can be set via "+KEY_ANDROID_SRC_ROOT+" environment variable")
     opt_parser.add_option("-d", "--debugger-wrapper", dest="debugger_wrapper", default=debugger_wrappers[0], 
