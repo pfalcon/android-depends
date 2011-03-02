@@ -79,9 +79,10 @@ def include_dirs_from_cfg(dir_path, cfg_name, search_dirs):
         for line in f:
             line = line.strip() # remove possible \n char
             if len(line) > 0 and not line.startswith("#"):
-                # the line is relative to dir_path, join them so line is relative to current dir
-                line = os.path.join(dir_path, line)
                 line = os.path.expanduser(line)
+                if not os.path.isabs(line):
+                    # the line is relative to dir_path, join them so line is relative to current dir
+                    line = os.path.join(dir_path, line)
                 if os.path.isdir(line):
                     if search_dirs.count(line) == 0:
                         search_dirs.append(line)
@@ -150,6 +151,6 @@ if cmdline_options.output_file != default_database_name:
         shutil.move(default_database_name_in, cmdline_options.output_file+".in")
     if os.path.isfile(default_database_name_po):
         shutil.move(default_database_name_po, cmdline_options.output_file+".po")
-os.remove(file_list_name)
+#os.remove(file_list_name)
 print "done, cscope database saved in " + cmdline_options.output_file
 
