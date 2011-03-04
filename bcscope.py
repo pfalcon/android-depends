@@ -70,7 +70,8 @@ if not cmdline_options.confirm:
 file_list = open(file_list_name, "w")
 # should we check more directories?
 dirs = []
-def include_dirs_from_cfg(dir_path, cfg_name, search_dirs):
+excluded_dirs = []
+def include_dirs_from_cfg(dir_path, cfg_name):
     cfg_file = os.path.join(dir_path, cfg_name)
     if os.path.isfile(cfg_file):
         if cmdline_options.verbose:
@@ -79,10 +80,20 @@ def include_dirs_from_cfg(dir_path, cfg_name, search_dirs):
         for line in f:
             line = line.strip() # remove possible \n char
             if len(line) > 0 and not line.startswith("#"):
+                include = True
+                if line.startswith("!"):
+                    include = False
+                    line = line[1:]
+
                 line = os.path.expanduser(line)
                 if not os.path.isabs(line):
                     # the line is relative to dir_path, join them so line is relative to current dir
                     line = os.path.join(dir_path, line)
+                line = os.path.relpath(line) # convert to relative path to keep consistency
+                if include:
+                    search_dirs = dirs
+                else:
+                    search_dirs = excluded_dirs
                 if os.path.isdir(line):
                     if search_dirs.count(line) == 0:
                         search_dirs.append(line)
@@ -90,7 +101,7 @@ def include_dirs_from_cfg(dir_path, cfg_name, search_dirs):
                     print line + " is not a directory, omit it"
         f.close()
 
-include_dirs_from_cfg("./", cmdline_options.input_file, dirs)
+include_dirs_from_cfg("./", cmdline_options.input_file)
 
 # find source files in all directories
 def naive_find_for_win(d, pattern, file_list):
@@ -103,26 +114,37 @@ def naive_find_for_win(d, pattern, file_list):
         first, then PATH environment variable. So, windows's own find will be executed
     """
     import re
-    def func(arg, dirname, fnames):
-        arg = arg + dirname + os.sep
-        for f in fnames:
-            fpath = arg+f
-            if os.path.isfile(fpath):
-                if re.match(pattern, fpath):
-                    source_files.append(fpath + "\n")
-            #    fnames.remove(f)
     source_files = []
-    os.path.walk(d, func, "")
+    for (root, subdirs, files) in os.walk(d):
+        for f in files:
+            fpath = os.path.join(root, f)
+            if re.match(pattern, fpath):
+                source_files.append(fpath + "\n")
+        i = 0
+        while i < len(subdirs):
+            d = subdirs[i]
+            fpath = os.path.relpath(os.path.join(root, d))
+            if excluded_dirs.count(fpath) > 0:
+                print "exclude " + fpath
+                subdirs.remove(d)
+#                excluded_dirs.remove(fpath) # a dir has been excluded is not gonna to be excluded again
+            else:
+                i += 1
+        
     file_list.writelines(source_files)
 
 if cmdline_options.recursive:
 # include cfg files in other directories
     for d in dirs:
-        include_dirs_from_cfg(d, cmdline_options.input_file, dirs)
+        include_dirs_from_cfg(d, cmdline_options.input_file)
 
 # make sure current directory is included
 if dirs.count(".") + dirs.count("./") < 1:
     dirs.insert(0, ".")
+
+if cmdline_options.absolute:
+    for d in excluded_dirs:
+        d = os.path.abspath(d)
 
 for d in dirs:
     if cmdline_options.absolute:
