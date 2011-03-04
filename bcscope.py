@@ -125,7 +125,8 @@ def naive_find_for_win(d, pattern, file_list):
             d = subdirs[i]
             fpath = os.path.relpath(os.path.join(root, d))
             if excluded_dirs.count(fpath) > 0:
-                print "exclude " + fpath
+                if cmdline_options.verbose:
+                    print "exclude " + fpath
                 subdirs.remove(d)
 #                excluded_dirs.remove(fpath) # a dir has been excluded is not gonna to be excluded again
             else:
@@ -151,7 +152,7 @@ for d in dirs:
         d = os.path.abspath(d)
     print "find " + lan_type + " source files in " + d
     if sys.platform != "win32":
-        # find.exe . -path ..\upload\src -prune -or -path ..\upload\include -prune -or -iregex ".+\.\(cpp\|c\|cxx\|cc\|h\|hpp\|hxx\)$"
+        # find.exe . -path ..\upload\src -prune -or -path ..\upload\include -prune -or -iregex ".+\.\(cpp\|c\|cxx\|cc\|h\|hpp\|hxx\)$" -print
         subprocess.Popen(["find", d, "-iregex", lan_pattern], stdout=file_list).wait()
     else:
         # change lan_pattern so that it works on python
