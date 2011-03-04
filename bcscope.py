@@ -151,7 +151,7 @@ for d in dirs:
         d = os.path.abspath(d)
     print "find " + lan_type + " source files in " + d
     if sys.platform != "win32":
-        # find directory -path exclude_directory -prune -or -print
+        # find.exe . -path ..\upload\src -prune -or -path ..\upload\include -prune -or -iregex ".+\.\(cpp\|c\|cxx\|cc\|h\|hpp\|hxx\)$"
         subprocess.Popen(["find", d, "-iregex", lan_pattern], stdout=file_list).wait()
     else:
         # change lan_pattern so that it works on python
