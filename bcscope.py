@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-__VERSION__ = '1.0.1'
+__VERSION__ = '1.1.1'
 __author__ = 'rx.wen218@gmail.com'
 
 import subprocess
@@ -125,8 +125,6 @@ def naive_find_for_win(d, pattern, file_list):
             d = subdirs[i]
             fpath = os.path.relpath(os.path.join(root, d))
             if excluded_dirs.count(fpath) > 0:
-                if cmdline_options.verbose:
-                    print "exclude " + fpath
                 subdirs.remove(d)
 #                excluded_dirs.remove(fpath) # a dir has been excluded is not gonna to be excluded again
             else:
@@ -152,8 +150,16 @@ for d in dirs:
         d = os.path.abspath(d)
     print "find " + lan_type + " source files in " + d
     if sys.platform != "win32":
-        # find.exe . -path ..\upload\src -prune -or -path ..\upload\include -prune -or -iregex ".+\.\(cpp\|c\|cxx\|cc\|h\|hpp\|hxx\)$" -print
-        subprocess.Popen(["find", d, "-iregex", lan_pattern], stdout=file_list).wait()
+        # find . -path src -prune -or -path include -prune -or -iregex ".+\.\(cpp\|c\|cxx\|cc\|h\|hpp\|hxx\)$" -print
+        cmd = ["find", d]
+        for ed in excluded_dirs:
+            p = ed
+            if not os.path.isabs(p) and p[0] != '.':
+                # make sure p is a relative path starts with ./
+                p = os.path.join("./", p)
+            cmd += ["-path", p, "-prune", "-or"]
+        cmd += ["-iregex", lan_pattern, "-print"]
+        subprocess.Popen(cmd, stdout=file_list).wait()
     else:
         # change lan_pattern so that it works on python
         lan_pattern = lan_pattern.replace("\(", "(").replace("\)", ")").replace("\|", "|")
