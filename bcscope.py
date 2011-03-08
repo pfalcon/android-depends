@@ -42,6 +42,7 @@ opt_parser.add_option("-c", "--confirm", action="store_true", default=False,
 # config application behavior
 valid_lan_types = {"c++": ".+\.\(cpp\|c\|cxx\|cc\|h\|hpp\|hxx\)$",
     "java": ".+\.java$",
+    "c#": ".+\.cs$",
     "python": ".+\.py$"}
 lan_type = "c++"
 if len(args) > 0:
