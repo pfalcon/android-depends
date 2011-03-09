@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-__VERSION__ = '1.1.1'
+__VERSION__ = '1.1.2'
 __author__ = 'rx.wen218@gmail.com'
 
 import subprocess
@@ -20,7 +20,7 @@ default_cfg_name = ".bcscope.cfg"
 # parse command line options
 opt_parser = OptionParser(version = "%prog " + __VERSION__, 
             description = "command line tool for generating cscope database",
-            usage = "%prog [-o file] [file type: c++(default)/python/java]")
+            usage = "%prog [-o file] [file type: c++(default)/c#/python/java]")
 opt_parser.add_option("-o", "--output", dest="output_file", default=default_database_name, 
         help="cscope database file")
 opt_parser.add_option("-i", "--input", dest="input_file", default=default_cfg_name, 
