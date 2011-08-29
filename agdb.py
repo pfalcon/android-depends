@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-__VERSION__ = '1.0.1'
+__VERSION__ = '1.1.0'
 __author__ = 'rx.wen218@gmail.com'
 """
 android cross platform gdb wrapper
@@ -219,6 +219,35 @@ def get_addr2line_cmd(cmdline_options, addr2line_path, symbol_path, address):
         cmd.append("-C")
     return cmd
 
+def generate_vim_error_file_for_stacktrace(cmdline_options, args):
+    addr2line_path = find_addr2line(cmdline_options.debugger_version)
+    if addr2line_path == "":
+        print "fail to find " + DEFAULT_ADDR2LINE_NAME
+        sys.exit(-1)
+    hex_number_pattern = " +"
+    stacktrace_pattern = "^.+(#[0-9]+).+ pc +([0-9a-f]+) +(.+)"
+    header_pattern = "^.+(pid: [0-9]+, +tid: [0-9]+ + >>>.+<<<)"
+    for line in sys.stdin:
+        m = re.match(header_pattern, line)
+        if m:
+            print m.groups()[0]
+            continue
+        m = re.match(stacktrace_pattern, line)
+        if m:
+            address = m.groups()[1]
+            number = m.groups()[0]
+            symbol_name = os.path.basename(m.groups()[2].rstrip())
+
+            symbol_path = find_process_symbol(symbol_name, cmdline_options.product_name)
+            if symbol_path == "":
+                print "symbol for %s not found"%(symbol_name)
+                continue
+
+            cmd = get_addr2line_cmd(cmdline_options, addr2line_path, symbol_path, address)
+            output = get_process_output(cmd)
+            if len(output) == 2:
+                print "%s: %s %s"%(output[1].rstrip(), number, output[0].rstrip())
+
 def perform_addr_conversion(cmdline_options, args):
     addr2line_path = find_addr2line(cmdline_options.debugger_version)
     if addr2line_path == "":
@@ -226,6 +255,7 @@ def perform_addr_conversion(cmdline_options, args):
         sys.exit(-1)
     
     if len(args) < 1:
+        # no address is specified on command line, read from stdin
         hex_number_pattern = " +"
         stacktrace_pattern = "^(.+#[0-9]+.+ )pc +([0-9a-f]+) +(.+)"
         for line in sys.stdin:
@@ -246,6 +276,7 @@ def perform_addr_conversion(cmdline_options, args):
                 if len(output) == 2:
                     print "%s%s: %s"%(prefix, output[0].rstrip(), output[1].rstrip())
     else:
+        # a address is specified on command line, convert it only
         address = args[0]
         symbol_name = cmdline_options.symbol_file_name
         symbol_path = find_process_symbol(symbol_name, cmdline_options.product_name)
@@ -300,6 +331,8 @@ if __name__ == "__main__":
             help="[addr2line] demangle function names [default: %default]")
     opt_parser.add_option("-S", "--basenames", action="store_true", default=False, 
             help="[addr2line] demangle function names [default: %default]")
+    opt_parser.add_option("-v", "--vim-error", action="store_true", default=False, 
+            help="[addr2line] generate vim error file for stacktrace [default: %default]")
     (cmdline_options, args) = opt_parser.parse_args()
 
     if cmdline_options.android_src_root == None or cmdline_options.android_src_root == "":
@@ -307,8 +340,11 @@ if __name__ == "__main__":
         sys.exit(-1)
     else:
         android_src_root = cmdline_options.android_src_root
-    
-    if cmdline_options.resolve:
+        
+    if cmdline_options.vim_error:
+# generate vim specific error file from stack trace
+        generate_vim_error_file_for_stacktrace(cmdline_options, args)
+    elif cmdline_options.resolve:
         perform_addr_conversion(cmdline_options, args)
     else:
         perform_debugging(cmdline_options, args)
