@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-__VERSION__ = '1.1.0'
+__VERSION__ = '1.1.1'
 __author__ = 'rx.wen218@gmail.com'
 """
 android cross platform gdb wrapper
@@ -330,13 +330,13 @@ if __name__ == "__main__":
     opt_parser.add_option("-C", "--demangle", action="store_true", default=False, 
             help="[addr2line] demangle function names [default: %default]")
     opt_parser.add_option("-S", "--basenames", action="store_true", default=False, 
-            help="[addr2line] demangle function names [default: %default]")
+            help="[addr2line] strip directory names [default: %default]")
     opt_parser.add_option("-v", "--vim-error", action="store_true", default=False, 
             help="[addr2line] generate vim error file for stacktrace [default: %default]")
     (cmdline_options, args) = opt_parser.parse_args()
 
     if cmdline_options.android_src_root == None or cmdline_options.android_src_root == "":
-        print "android-src-root must be set"
+        print "android-src-root must be set, either through --android-src-root argument or ANDROID_SRC_ROOT environment variable"
         sys.exit(-1)
     else:
         android_src_root = cmdline_options.android_src_root
