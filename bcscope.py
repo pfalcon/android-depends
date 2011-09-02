@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-__VERSION__ = '1.1.2'
+__VERSION__ = '1.1.3'
 __author__ = 'rx.wen218@gmail.com'
 
 import subprocess
@@ -37,24 +37,33 @@ opt_parser.add_option("-q", "--quick", action="store_true", default=False,
         help="Build an inverted index for quick symbol searching. [default: %default]")
 opt_parser.add_option("-c", "--confirm", action="store_true", default=False, 
         help="confirm overwrite existing cscope database without interaction [default: %default]")
+opt_parser.add_option("-p", "--preserve-filelist", action="store_true", default=False, 
+        help="don't delete cscope.files after the database has been generated [default: %default]")
 (cmdline_options, args) = opt_parser.parse_args()
 
 # config application behavior
-valid_lan_types = {"c++": ".+\.\(cpp\|c\|cxx\|cc\|h\|hpp\|hxx\)$",
-    "java": ".+\.java$",
-    "c#": ".+\.cs$",
-    "python": ".+\.py$"}
-lan_type = "c++"
-if len(args) > 0:
-    lan_type = args[0]
-if valid_lan_types.has_key(lan_type):
-    lan_pattern = valid_lan_types[lan_type]
-else:
-    print "invalid language type: " + lan_type
-    print "must be one of:"
-    for (k, v) in valid_lan_types.items():
-        print "\t" + k
-    sys.exit(-1)
+valid_lan_types = {"c++": "cpp\|c\|cxx\|cc\|h\|hpp\|hxx",
+    "java": "java",
+    "c#": "cs",
+    "python": "py"}
+lan_type = ''
+if len(args) == 0:
+# no language specified, default to c++
+    args = ['c++']
+
+lan_pattern = ''
+for arg in args:
+    if valid_lan_types.has_key(arg):
+        if len(lan_pattern) > 0:
+            lan_pattern += '\|'
+        lan_pattern += valid_lan_types[arg]
+    else:
+        print "invalid language type: " + arg 
+        print "must be one of:"
+        for (k, v) in valid_lan_types.items():
+            print "\t" + k
+        sys.exit(-1)
+lan_pattern = '.+\.\(' + lan_pattern + '\)$'
 
 # take care of accidently overwrite existing database file
 if not cmdline_options.confirm:
@@ -181,6 +190,7 @@ if cmdline_options.output_file != default_database_name:
         shutil.move(default_database_name_in, cmdline_options.output_file+".in")
     if os.path.isfile(default_database_name_po):
         shutil.move(default_database_name_po, cmdline_options.output_file+".po")
-#os.remove(file_list_name)
+if not cmdline_options.preserve_filelist:
+    os.remove(file_list_name)
 print "done, cscope database saved in " + cmdline_options.output_file
 
