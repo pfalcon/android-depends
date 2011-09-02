@@ -53,6 +53,7 @@ if len(args) == 0:
 
 lan_pattern = ''
 for arg in args:
+    lan_type += arg + ' '
     if valid_lan_types.has_key(arg):
         if len(lan_pattern) > 0:
             lan_pattern += '\|'
@@ -158,7 +159,7 @@ if cmdline_options.absolute:
 for d in dirs:
     if cmdline_options.absolute:
         d = os.path.abspath(d)
-    print "find " + lan_type + " source files in " + d
+    print "find " + lan_type + "source files in " + d
     if sys.platform != "win32":
         # find . -path src -prune -or -path include -prune -or -iregex ".+\.\(cpp\|c\|cxx\|cc\|h\|hpp\|hxx\)$" -print
         cmd = ["find", d]
