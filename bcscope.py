@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-__VERSION__ = '1.1.3'
+__VERSION__ = '1.1.4'
 __author__ = 'rx.wen218@gmail.com'
 
 import subprocess
@@ -24,7 +24,7 @@ opt_parser = OptionParser(version = "%prog " + __VERSION__,
 opt_parser.add_option("-o", "--output", dest="output_file", default=default_database_name, 
         help="cscope database file")
 opt_parser.add_option("-i", "--input", dest="input_file", default=default_cfg_name, 
-        help="cfg file lists all directories to be searched")
+        help="cfg file lists all directories to be included or exclued from search")
 opt_parser.add_option("-r", "--recursive", action="store_true", default=False, 
         help="recursivly include input_file contained in all directories [default: %default]")
 opt_parser.add_option("-v", "--verbose", action="store_true", default=False, 
@@ -39,6 +39,10 @@ opt_parser.add_option("-c", "--confirm", action="store_true", default=False,
         help="confirm overwrite existing cscope database without interaction [default: %default]")
 opt_parser.add_option("-p", "--preserve-filelist", action="store_true", default=False, 
         help="don't delete cscope.files after the database has been generated [default: %default]")
+opt_parser.add_option("", "--include", default=None, action="append",
+        help="additional directories to be included in search, can be specified multiple times")
+opt_parser.add_option("", "--exclude", default=None, action="append",
+        help="additional directories to be exclued from search, can be specified multiple times")
 (cmdline_options, args) = opt_parser.parse_args()
 
 # config application behavior
@@ -82,6 +86,12 @@ file_list = open(file_list_name, "w")
 # should we check more directories?
 dirs = []
 excluded_dirs = []
+
+if cmdline_options.include:
+    dirs.extend(cmdline_options.include)
+if cmdline_options.exclude:
+    excluded_dirs.extend(cmdline_options.exclude)
+
 def include_dirs_from_cfg(dir_path, cfg_name):
     cfg_file = os.path.join(dir_path, cfg_name)
     if os.path.isfile(cfg_file):
@@ -153,8 +163,11 @@ if dirs.count(".") + dirs.count("./") < 1:
     dirs.insert(0, ".")
 
 if cmdline_options.absolute:
+# convert exclude path to absolute
+    j = 0
     for d in excluded_dirs:
-        d = os.path.abspath(d)
+        excluded_dirs[j] = os.path.abspath(d)
+        j += 1
 
 for d in dirs:
     if cmdline_options.absolute:
@@ -168,6 +181,8 @@ for d in dirs:
             if not os.path.isabs(p) and p[0] != '.':
                 # make sure p is a relative path starts with ./
                 p = os.path.join("./", p)
+            else:
+                p = os.path.relpath(p) # do conversion here to make sure p doesn't end with / 
             cmd += ["-path", p, "-prune", "-or"]
         cmd += ["-iregex", lan_pattern, "-print"]
         subprocess.Popen(cmd, stdout=file_list).wait()
