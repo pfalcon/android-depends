@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-__VERSION__ = '1.1.4'
+__VERSION__ = '1.1.5'
 __author__ = 'rx.wen218@gmail.com'
 
 import subprocess
@@ -162,16 +162,22 @@ if cmdline_options.recursive:
 if dirs.count(".") + dirs.count("./") < 1:
     dirs.insert(0, ".")
 
-if cmdline_options.absolute:
-# convert exclude path to absolute
-    j = 0
-    for d in excluded_dirs:
-        excluded_dirs[j] = os.path.abspath(d)
-        j += 1
-
+j = 0
 for d in dirs:
     if cmdline_options.absolute:
-        d = os.path.abspath(d)
+        dirs[j] = os.path.abspath(d)
+    else:
+        dirs[j] = os.path.relpath(d)
+    j += 1
+
+# convert excluded_dirs path to relative to keep their format consitent
+# excluded_dirs should always be relative
+j = 0
+for d in excluded_dirs:
+    excluded_dirs[j] = os.path.relpath(d)
+    j += 1
+
+for d in dirs:
     print "find " + lan_type + "source files in " + d
     if sys.platform != "win32":
         # find . -path src -prune -or -path include -prune -or -iregex ".+\.\(cpp\|c\|cxx\|cc\|h\|hpp\|hxx\)$" -print
