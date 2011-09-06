@@ -110,7 +110,10 @@ def include_dirs_from_cfg(dir_path, cfg_name):
                 if not os.path.isabs(line):
                     # the line is relative to dir_path, join them so line is relative to current dir
                     line = os.path.join(dir_path, line)
-                line = os.path.relpath(line) # convert to relative path to keep consistency
+                if cmdline_options.absolute:
+                    line = os.path.abspath(line)
+                else:
+                    line = os.path.relpath(line)
                 if include:
                     search_dirs = dirs
                 else:
@@ -144,7 +147,10 @@ def naive_find_for_win(d, pattern, file_list):
         i = 0
         while i < len(subdirs):
             d = subdirs[i]
-            fpath = os.path.relpath(os.path.join(root, d))
+            if cmdline_options.absolute:
+                fpath = os.path.abspath(os.path.join(root, d))
+            else:
+                fpath = os.path.relpath(os.path.join(root, d))
             if excluded_dirs.count(fpath) > 0:
                 subdirs.remove(d)
 #                excluded_dirs.remove(fpath) # a dir has been excluded is not gonna to be excluded again
@@ -170,11 +176,12 @@ for d in dirs:
         dirs[j] = os.path.relpath(d)
     j += 1
 
-# convert excluded_dirs path to relative to keep their format consitent
-# excluded_dirs should always be relative
 j = 0
 for d in excluded_dirs:
-    excluded_dirs[j] = os.path.relpath(d)
+    if cmdline_options.absolute:
+        excluded_dirs[j] = os.path.abspath(d)
+    else:
+        excluded_dirs[j] = os.path.relpath(d)
     j += 1
 
 for d in dirs:
@@ -187,8 +194,8 @@ for d in dirs:
             if not os.path.isabs(p) and p[0] != '.':
                 # make sure p is a relative path starts with ./
                 p = os.path.join("./", p)
-            else:
-                p = os.path.relpath(p) # do conversion here to make sure p doesn't end with / 
+            if cmdline_options.absolute:
+                p = os.path.abspath(p)
             cmd += ["-path", p, "-prune", "-or"]
         cmd += ["-iregex", lan_pattern, "-print"]
         subprocess.Popen(cmd, stdout=file_list).wait()
