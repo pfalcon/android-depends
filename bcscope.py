@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-__VERSION__ = '1.1.5'
+__VERSION__ = '1.1.6'
 __author__ = 'rx.wen218@gmail.com'
 
 import subprocess
@@ -10,7 +10,6 @@ import shutil
 import os
 from optparse import OptionParser
 
-SUCCESS = 0
 file_list_name = "cscope.files"
 default_database_name = "cscope.out"
 default_database_name_in = "cscope.in.out"
@@ -92,6 +91,12 @@ if cmdline_options.include:
 if cmdline_options.exclude:
     excluded_dirs.extend(cmdline_options.exclude)
 
+def convert_path(p):
+    if cmdline_options.absolute:
+        return os.path.abspath(p)
+    else:
+        return os.path.relpath(p)
+
 def include_dirs_from_cfg(dir_path, cfg_name):
     cfg_file = os.path.join(dir_path, cfg_name)
     if os.path.isfile(cfg_file):
@@ -110,10 +115,7 @@ def include_dirs_from_cfg(dir_path, cfg_name):
                 if not os.path.isabs(line):
                     # the line is relative to dir_path, join them so line is relative to current dir
                     line = os.path.join(dir_path, line)
-                if cmdline_options.absolute:
-                    line = os.path.abspath(line)
-                else:
-                    line = os.path.relpath(line)
+                line = convert_path(line)
                 if include:
                     search_dirs = dirs
                 else:
@@ -147,13 +149,9 @@ def naive_find_for_win(d, pattern, file_list):
         i = 0
         while i < len(subdirs):
             d = subdirs[i]
-            if cmdline_options.absolute:
-                fpath = os.path.abspath(os.path.join(root, d))
-            else:
-                fpath = os.path.relpath(os.path.join(root, d))
+            fpath = convert_path(os.path.join(root, d))
             if excluded_dirs.count(fpath) > 0:
                 subdirs.remove(d)
-#                excluded_dirs.remove(fpath) # a dir has been excluded is not gonna to be excluded again
             else:
                 i += 1
         
@@ -170,18 +168,12 @@ if dirs.count(".") + dirs.count("./") < 1:
 
 j = 0
 for d in dirs:
-    if cmdline_options.absolute:
-        dirs[j] = os.path.abspath(d)
-    else:
-        dirs[j] = os.path.relpath(d)
+    dirs[j] = convert_path(d)
     j += 1
 
 j = 0
 for d in excluded_dirs:
-    if cmdline_options.absolute:
-        excluded_dirs[j] = os.path.abspath(d)
-    else:
-        excluded_dirs[j] = os.path.relpath(d)
+    excluded_dirs[j] = convert_path(d)
     j += 1
 
 for d in dirs:
@@ -194,8 +186,7 @@ for d in dirs:
             if not os.path.isabs(p) and p[0] != '.':
                 # make sure p is a relative path starts with ./
                 p = os.path.join("./", p)
-            if cmdline_options.absolute:
-                p = os.path.abspath(p)
+            p = convert_path(p)
             cmd += ["-path", p, "-prune", "-or"]
         cmd += ["-iregex", lan_pattern, "-print"]
         subprocess.Popen(cmd, stdout=file_list).wait()
