@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-__VERSION__ = '1.1.6'
+__VERSION__ = '1.1.7'
 __author__ = 'rx.wen218@gmail.com'
 
 import subprocess
@@ -180,7 +180,13 @@ for d in dirs:
     print "find " + lan_type + "source files in " + d
     if sys.platform != "win32":
         # find . -path src -prune -or -path include -prune -or -iregex ".+\.\(cpp\|c\|cxx\|cc\|h\|hpp\|hxx\)$" -print
-        cmd = ["find", d]
+        if sys.platform == "darwin":
+            # mac os
+            cmd = ["find", "-E", d]
+            lan_pattern = lan_pattern.replace("\(", "(").replace("\)", ")").replace("\|", "|")
+        else:
+            cmd = ["find", d]
+
         for ed in excluded_dirs:
             p = ed
             if not os.path.isabs(p) and p[0] != '.':
