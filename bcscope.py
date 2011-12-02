@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-__VERSION__ = '1.1.8'
+__VERSION__ = '1.1.9'
 __author__ = 'rx.wen218@gmail.com'
 
 import subprocess
@@ -42,6 +42,8 @@ opt_parser.add_option("", "--include", default=None, action="append",
         help="additional directories to be included in search, can be specified multiple times")
 opt_parser.add_option("", "--exclude", default=None, action="append",
         help="additional directories to be exclued from search, can be specified multiple times")
+opt_parser.add_option("", "--exclude_pattern", default=None, action="append",
+        help="file pattern (regular expression) to be excluded, can be specified multiple times")
 (cmdline_options, args) = opt_parser.parse_args()
 
 # config application behavior
@@ -137,7 +139,16 @@ def find_files(d, pattern, file_list):
         for f in files:
             fpath = os.path.join(root, f)
             if re.match(pattern, fpath):
-                source_files.append(fpath + "\n")
+                # check if the file matches exclude_pattern
+                should_exclude = False
+                for exclude_pattern in cmdline_options.exclude_pattern:
+                    if re.match(exclude_pattern, fpath):
+                        should_exclude = True
+                        if cmdline_options.verbose:
+                            print "exclude " + fpath
+                        break
+                if not should_exclude:
+                    source_files.append(fpath + "\n")
         i = 0
         while i < len(subdirs):
             d = subdirs[i]
