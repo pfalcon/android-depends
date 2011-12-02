@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-__VERSION__ = '1.1.7'
+__VERSION__ = '1.1.8'
 __author__ = 'rx.wen218@gmail.com'
 
 import subprocess
@@ -130,15 +130,7 @@ def include_dirs_from_cfg(dir_path, cfg_name):
 include_dirs_from_cfg("./", cmdline_options.input_file)
 
 # find source files in all directories
-def naive_find_for_win(d, pattern, file_list):
-    """
-    a naive implementation of find for windows
-    we do this for two reasons:
-    1. unix find isn't widely available on windows
-    2. even if we manually install unix find, the windows's own find take precedence over it.
-        because the CreateProcess api called by Popen will search system directory
-        first, then PATH environment variable. So, windows's own find will be executed
-    """
+def find_files(d, pattern, file_list):
     import re
     source_files = []
     for (root, subdirs, files) in os.walk(d):
@@ -178,28 +170,9 @@ for d in excluded_dirs:
 
 for d in dirs:
     print "find " + lan_type + "source files in " + d
-    if sys.platform != "win32":
-        # find . -path src -prune -or -path include -prune -or -iregex ".+\.\(cpp\|c\|cxx\|cc\|h\|hpp\|hxx\)$" -print
-        if sys.platform == "darwin":
-            # mac os
-            cmd = ["find", "-E", d]
-            lan_pattern = lan_pattern.replace("\(", "(").replace("\)", ")").replace("\|", "|")
-        else:
-            cmd = ["find", d]
-
-        for ed in excluded_dirs:
-            p = ed
-            if not os.path.isabs(p) and p[0] != '.':
-                # make sure p is a relative path starts with ./
-                p = os.path.join("./", p)
-            p = convert_path(p)
-            cmd += ["-path", p, "-prune", "-or"]
-        cmd += ["-iregex", lan_pattern, "-print"]
-        subprocess.Popen(cmd, stdout=file_list).wait()
-    else:
-        # change lan_pattern so that it works on python
-        lan_pattern = lan_pattern.replace("\(", "(").replace("\)", ")").replace("\|", "|")
-        naive_find_for_win(d, lan_pattern, file_list)
+    # change lan_pattern so that it works on python
+    lan_pattern = lan_pattern.replace("\(", "(").replace("\)", ")").replace("\|", "|")
+    find_files(d, lan_pattern, file_list)
 file_list.close()
 
 # actually generate database
