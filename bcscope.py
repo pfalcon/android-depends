@@ -141,12 +141,13 @@ def find_files(d, pattern, file_list):
             if re.match(pattern, fpath):
                 # check if the file matches exclude_pattern
                 should_exclude = False
-                for exclude_pattern in cmdline_options.exclude_pattern:
-                    if re.match(exclude_pattern, fpath):
-                        should_exclude = True
-                        if cmdline_options.verbose:
-                            print "exclude " + fpath
-                        break
+                if cmdline_options.exclude_pattern:
+                    for exclude_pattern in cmdline_options.exclude_pattern:
+                        if re.match(exclude_pattern, fpath):
+                            should_exclude = True
+                            if cmdline_options.verbose:
+                                print "exclude " + fpath
+                            break
                 if not should_exclude:
                     source_files.append(fpath + "\n")
         i = 0
