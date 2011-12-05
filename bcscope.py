@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-__VERSION__ = '1.1.9'
+__VERSION__ = '1.2.0'
 __author__ = 'rx.wen218@gmail.com'
 
 import subprocess
@@ -38,11 +38,11 @@ opt_parser.add_option("-c", "--confirm", action="store_true", default=False,
         help="confirm overwrite existing cscope database without interaction [default: %default]")
 opt_parser.add_option("-p", "--preserve-filelist", action="store_true", default=False, 
         help="don't delete cscope.files after the database has been generated [default: %default]")
-opt_parser.add_option("", "--include", default=None, action="append",
+opt_parser.add_option("", "--include-dir", default=None, action="append",
         help="additional directories to be included in search, can be specified multiple times")
-opt_parser.add_option("", "--exclude", default=None, action="append",
+opt_parser.add_option("", "--exclude-dir", default=None, action="append",
         help="additional directories to be exclued from search, can be specified multiple times")
-opt_parser.add_option("", "--exclude_pattern", default=None, action="append",
+opt_parser.add_option("", "--exclude", default=None, action="append",
         help="file pattern (regular expression) to be excluded, can be specified multiple times")
 (cmdline_options, args) = opt_parser.parse_args()
 
@@ -88,10 +88,10 @@ file_list = open(file_list_name, "w")
 dirs = []
 excluded_dirs = []
 
-if cmdline_options.include:
-    dirs.extend(cmdline_options.include)
-if cmdline_options.exclude:
-    excluded_dirs.extend(cmdline_options.exclude)
+if cmdline_options.include_dir:
+    dirs.extend(cmdline_options.include_dir)
+if cmdline_options.exclude_dir:
+    excluded_dirs.extend(cmdline_options.exclude_dir)
 
 def convert_path(p):
     if cmdline_options.absolute:
@@ -141,8 +141,8 @@ def find_files(d, pattern, file_list):
             if re.match(pattern, fpath):
                 # check if the file matches exclude_pattern
                 should_exclude = False
-                if cmdline_options.exclude_pattern:
-                    for exclude_pattern in cmdline_options.exclude_pattern:
+                if cmdline_options.exclude:
+                    for exclude_pattern in cmdline_options.exclude:
                         if re.match(exclude_pattern, fpath):
                             should_exclude = True
                             if cmdline_options.verbose:
