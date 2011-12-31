@@ -21,14 +21,17 @@ def add_module_to_source(mod_name):
             for dep in mod.depends:
                 add_module_to_source(dep)
 
+def transfer_to_dot_valid(name):
+    return name.replace("-", "_").replace(".", "_").replace("+", "")
+
 def generate_dependency_graph(dot_file_path):
     dot_file = open(dot_file_path, "w")
     dot_file.write("digraph {\n")
     for (mod_name, mod) in modules.items():
-            dot_file.write("%s[label=\"%s\l%s\"]\n"%(mod.name, mod.name, mod.directory))
+            dot_file.write("%s[label=\"%s\l%s\"]\n"%(transfer_to_dot_valid(mod.name), mod.name, mod.directory))
     for (mod_name, mod) in modules.items():
         for dep in mod.depends:
-            dot_file.write("%s->%s\n"%(mod.name, dep))
+            dot_file.write("%s->%s\n"%(transfer_to_dot_valid(mod.name), transfer_to_dot_valid(dep)))
     dot_file.write("}\n")
     dot_file.close()
 
@@ -61,6 +64,9 @@ if __name__ == "__main__":
             print "must specify -o/--output option"
             sys.exit(-1)
         else:
+            android_root = androidmk_parser.find_root()
+            if android_root:
+                dir_to_parse = android_root
             all_modules = parse_directory(dir_to_parse)
             if not cmdline_options.module:
                 modules = all_modules.pool

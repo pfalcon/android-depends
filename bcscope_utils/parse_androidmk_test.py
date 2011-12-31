@@ -54,5 +54,5 @@ if __name__ == "__main__":
 #    print_modules()
 #    generate_dependency_graph("parse.dot")
     
-    print all_modules
+#    print all_modules
 

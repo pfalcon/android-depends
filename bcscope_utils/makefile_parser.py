@@ -4,6 +4,31 @@
 import re
 import os
 
+def function_basename(args, vp):
+    args = args.split()
+    result = ""
+    for arg in args:
+        basename = os.path.splitext(arg)
+        result += basename[0] + " "
+    return result.strip()
+
+def function_dir(args, vp):
+    args = args.split()
+    result = ""
+    for arg in args:
+        dir_name = os.path.dirname(arg)
+        if dir_name == "":
+            dir_name = os.path.curdir
+        result += dir_name + os.path.sep + " "
+    return result.strip()
+
+def function_notdir(args, vp):
+    args = args.split()
+    result = ""
+    for arg in args:
+        result += os.path.basename(arg) + " "
+    return result.strip()
+
 def function_addprefix(args, vp):
     args = args.split(",")
     prefix = args[0]
@@ -32,9 +57,12 @@ class VariablePool(object):
 #   for example, $d reference variable d. Refer to gnu make manual.pdf section 6.1
     VAR_REFERENCE_RX = re.compile(r"\$[\({]([A-Za-z][A-Za-z0-9_]*)[}\)]")
     VAR_REFERENCE_RX = re.compile(r"\$(([\({]([A-Za-z][A-Za-z0-9_]*)[}\)])|([A-Za-z]\b))")
-    FUNCTION_CALL_RX = re.compile(r"\$\(([a-z]+) ([a-z0-9_\-\.\\/]*)(,\s*(.*)){0,1}\)")
+    FUNCTION_CALL_RX = re.compile(r"\$\(([a-z]+) ([a-z0-9_\-\.\\/]*)(,{0,1}\s*(.*)){0,1}\)")
 # re.compile(r"\$(([\({]([A-Za-z][A-Za-z0-9_]*)[}\)])|([A-Za-z]\b))")
     MK_FUNCTIONS = {
+            "basename" : function_basename,
+            "notdir" : function_notdir,
+            "dir" : function_dir,
             "addprefix" : function_addprefix,
             "addsuffix" : function_addsuffix
             }
@@ -63,7 +91,10 @@ class VariablePool(object):
             else:
                 if fun_name in VariablePool.MK_FUNCTIONS:
                     func = VariablePool.MK_FUNCTIONS[fun_name]
-                    expression = func(match.group(2)+match.group(3), self)
+                    arg = match.group(2)
+                    if match.group(3):
+                        arg += match.group(3)
+                    expression = func(arg, self)
         return expression
 
     def expand_var(self, expression):

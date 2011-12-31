@@ -50,6 +50,7 @@ def find_root():
     while not found and not os.path.samefile(fs_root, curdir):
         if os.path.exists(os.path.join(curdir, root_clue)):
             found = True
+            break
         curdir = os.path.join(os.path.pardir, curdir)
     return curdir if found else None
 
@@ -180,6 +181,7 @@ def parse_makefile(fn, existing_modules=None):
                 current_module.directory = os.path.dirname(fn)
 
             if var_name == "LOCAL_MODULE":
+                var_value = variable_pool.eval_expression(var_value)
                 temp_module = local_modules.find_module(var_value)
                 if temp_module and temp_module != current_module:
                     temp_module.src = current_module.src
@@ -208,5 +210,19 @@ def parse_makefile(fn, existing_modules=None):
             continue
         value = variable_pool.eval_expression(value)
         item.src = value
-    
+        number = len(item.depends)
+        index = 0
+        while index < number:
+            value = item.depends[index]
+            value = variable_pool.eval_expression(value)
+            items = value.split()
+            if len(items) > 0:
+                item.depends[index] = items[0]
+                item.depends.extend(items[1:])
+                number += len(items) - 1
+                index += 1
+            else:
+                item.depends.pop(index)
+                number -= 1
+
     return local_modules

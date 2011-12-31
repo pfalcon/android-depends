@@ -68,6 +68,27 @@ class VariablePoolTest(unittest.TestCase):
 # single letter variables can be referenced this way
         self.assertEqual(vp.eval_expression("$d"), vp.eval_expression("single/letter"))
 
+    def test_func_notdir(self):
+        vp = AndroidMKVariablePool("Android.mk")
+        self.assertEqual("/home/a", vp.eval_expression("$(basename /home/a.cpp)"))
+        self.assertEqual("/home/a", vp.eval_expression("$(basename /home/a.cpp )"))
+        self.assertEqual("/home/a b", vp.eval_expression("$(basename /home/a.cpp b.c)"))
+        self.assertEqual("/home/a /home/b", vp.eval_expression("$(basename /home/a.cpp /home/b.c)"))
+
+    def test_func_notdir(self):
+        vp = AndroidMKVariablePool("Android.mk")
+        self.assertEqual("a.cpp", vp.eval_expression("$(notdir /home/a.cpp)"))
+        self.assertEqual("a.cpp", vp.eval_expression("$(notdir /home/a.cpp )"))
+        self.assertEqual("a.cpp b.c", vp.eval_expression("$(notdir /home/a.cpp b.c)"))
+        self.assertEqual("a.cpp b.c", vp.eval_expression("$(notdir /home/a.cpp /home/b.c)"))
+
+    def test_func_dir(self):
+        vp = AndroidMKVariablePool("Android.mk")
+        self.assertEqual("/home/", vp.eval_expression("$(dir /home/a.cpp)"))
+        self.assertEqual("/home/", vp.eval_expression("$(dir /home/a.cpp )"))
+        self.assertEqual("/home/ ./", vp.eval_expression("$(dir /home/a.cpp b.c)"))
+        self.assertEqual("/home/ /home/", vp.eval_expression("$(dir /home/a.cpp /home/b.c)"))
+
     def test_func_addprefix(self):
         vp = AndroidMKVariablePool("Android.mk")
         self.assertEqual("src/bbb", vp.eval_expression("$(addprefix src/, bbb)"))
