@@ -80,13 +80,14 @@ class VariablePool(object):
     
     def expand_fun(self, expression):
         match = self.FUNCTION_CALL_RX.search(expression)
+        result = expression
         if match:
             fun_name = match.group(1)
             if fun_name == "call":
                 fun_name = match.group(2)
                 if fun_name in VariablePool.MK_FUNCTIONS:
                     func = VariablePool.MK_FUNCTIONS[fun_name]
-                    expression = func(match.group(3) if len(match.groups()) > 3 \
+                    result = func(match.group(3) if len(match.groups()) > 3 \
                             else None, self)
             else:
                 if fun_name in VariablePool.MK_FUNCTIONS:
@@ -94,8 +95,9 @@ class VariablePool(object):
                     arg = match.group(2)
                     if match.group(3):
                         arg += match.group(3)
-                    expression = func(arg, self)
-        return expression
+                    result = func(arg, self)
+            result = expression[:match.start()] + result + expression[match.end():]
+        return result
 
     def expand_var(self, expression):
         match = self.VAR_REFERENCE_RX.search(expression)

@@ -68,6 +68,20 @@ class VariablePoolTest(unittest.TestCase):
 # single letter variables can be referenced this way
         self.assertEqual(vp.eval_expression("$d"), vp.eval_expression("single/letter"))
 
+    def test_partial_variable(self):
+        vp = AndroidMKVariablePool("Android.mk")
+        vp.add_variable(VariablePool.VAR_ASSIGNMENT_RX.match("aaa:=raymond"))
+        self.assertEqual("lisaraymond", vp.eval_expression("lisa$(aaa)"))
+        self.assertEqual("raymondlisa", vp.eval_expression("$(aaa)lisa"))
+        self.assertEqual("raymondraymond", vp.eval_expression("$(aaa)$(aaa)"))
+        self.assertEqual("raymondlisaraymond", vp.eval_expression("$(aaa)lisa$(aaa)"))
+
+    def test_partial_func(self):
+        vp = AndroidMKVariablePool("Android.mk")
+        vp.add_variable(VariablePool.VAR_ASSIGNMENT_RX.match("aaa:=raymond"))
+        self.assertEqual("lisa/home/a",vp.eval_expression("lisa$(basename /home/a.cpp)"))
+        self.assertEqual("a.cpplisa", vp.eval_expression("$(notdir /home/a.cpp)lisa"))
+
     def test_func_notdir(self):
         vp = AndroidMKVariablePool("Android.mk")
         self.assertEqual("/home/a", vp.eval_expression("$(basename /home/a.cpp)"))

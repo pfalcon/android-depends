@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-__VERSION__ = '1.0.0'
+__VERSION__ = '1.0.1'
 __author__ = 'rx.wen218@gmail.com'
 
 import sys
@@ -46,7 +46,7 @@ if __name__ == "__main__":
 # parse command line options
     opt_parser = OptionParser(version = "%prog " + __VERSION__, 
                 description = "command line tool for generating android dependency diagram",
-                usage = "%prog [-o dot_file]")
+                usage = "%prog [OPTION] [dir_to_parse]")
     opt_parser.add_option("-o", "--output", dest="output_file", 
             help="dot diagram file")
     opt_parser.add_option("-m", "--module", dest="module",

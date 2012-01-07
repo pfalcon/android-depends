@@ -94,7 +94,7 @@ class Module(object):
     def __str__(self):
         result = self.name
         for module in self.depends:
-            result += " " + module.name + " : " + module.src
+            result += " " + module
         return result
 
 class ModulePool(object):
@@ -165,6 +165,7 @@ def parse_makefile(fn, existing_modules=None):
     variable_pool = AndroidMKVariablePool(fn)
 
     current_module = None
+    within_func_definition = False
 
     while 1:
         line = fp.readline()
@@ -172,6 +173,14 @@ def parse_makefile(fn, existing_modules=None):
             break
         if line.upper() == "include $(CLEAR_VARS)".upper():
             current_module = None
+        if line.lower().startswith("define "):
+            within_func_definition = True
+        if line.lower().strip() == "endef":
+            within_func_definition = False
+
+        if within_func_definition:
+#don't parse the line if we're within function definition
+            continue
 
         match = makefile_parser.VariablePool.VAR_ASSIGNMENT_RX.match(line)
         if match:
@@ -204,12 +213,6 @@ def parse_makefile(fn, existing_modules=None):
 
     # update values in modules
     for (key,item) in local_modules.pool.items():
-#v.src may be None, for example, libext module in iptables/extensions/Android.mk
-        value = item.src
-        if not value:
-            continue
-        value = variable_pool.eval_expression(value)
-        item.src = value
         number = len(item.depends)
         index = 0
         while index < number:
@@ -224,5 +227,6 @@ def parse_makefile(fn, existing_modules=None):
             else:
                 item.depends.pop(index)
                 number -= 1
+    #print variable_pool.immediate_variables
 
     return local_modules
