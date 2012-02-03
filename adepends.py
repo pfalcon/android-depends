@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-__VERSION__ = '1.0.1'
+__VERSION__ = '1.0.2'
 __author__ = 'rx.wen218@gmail.com'
 
 import sys
@@ -24,10 +24,15 @@ def add_module_to_source(mod_name):
 def transfer_to_dot_valid(name):
     return name.replace("-", "_").replace(".", "_").replace("+", "")
 
-def generate_dependency_graph(dot_file_path):
+def generate_dependency_graph(cmd_options):
+    dot_file_path = cmd_options.output_file
     dot_file = open(dot_file_path, "w")
     dot_file.write("digraph {\n")
     for (mod_name, mod) in modules.items():
+        if cmd_options.module and mod.name == cmd_options.module:
+#highlight target module
+            dot_file.write("%s[style=bold,color=\"tomato\",label=\"%s\l%s\"]\n"%(transfer_to_dot_valid(mod.name), mod.name, mod.directory))
+        else:
             dot_file.write("%s[label=\"%s\l%s\"]\n"%(transfer_to_dot_valid(mod.name), mod.name, mod.directory))
     for (mod_name, mod) in modules.items():
         for dep in mod.depends:
@@ -72,7 +77,7 @@ if __name__ == "__main__":
                 modules = all_modules.pool
             else:
                 add_module_to_source(cmdline_options.module)
-            generate_dependency_graph(cmdline_options.output_file)
+            generate_dependency_graph(cmdline_options)
     else:
         all_modules = parse_directory(dir_to_parse)
         for mod_name in all_modules.pool:
