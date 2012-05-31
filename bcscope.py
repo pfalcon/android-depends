@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-__VERSION__ = '1.2.0'
+__VERSION__ = '1.2.1'
 __author__ = 'rx.wen218@gmail.com'
 
 import subprocess
@@ -44,6 +44,8 @@ opt_parser.add_option("", "--exclude-dir", default=None, action="append",
         help="additional directories to be exclued from search, can be specified multiple times")
 opt_parser.add_option("", "--exclude", default=None, action="append",
         help="file pattern (regular expression) to be excluded, can be specified multiple times")
+opt_parser.add_option("-t", "--ctags", action="store_true", default=False, 
+        help="generate ctags database as well [default: %default]")
 (cmdline_options, args) = opt_parser.parse_args()
 
 # config application behavior
@@ -201,7 +203,11 @@ if cmdline_options.output_file != default_database_name:
         shutil.move(default_database_name_in, cmdline_options.output_file+".in")
     if os.path.isfile(default_database_name_po):
         shutil.move(default_database_name_po, cmdline_options.output_file+".po")
+print "done, cscope database saved in " + cmdline_options.output_file
+if cmdline_options.ctags:
+    cmd = ["ctags", "-L", file_list_name]
+    subprocess.Popen(cmd).wait()
+    print "done, ctags database saved in tags"
 if not cmdline_options.preserve_filelist:
     os.remove(file_list_name)
-print "done, cscope database saved in " + cmdline_options.output_file
 
