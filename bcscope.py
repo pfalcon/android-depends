@@ -205,6 +205,7 @@ if cmdline_options.output_file != default_database_name:
         shutil.move(default_database_name_po, cmdline_options.output_file+".po")
 print "done, cscope database saved in " + cmdline_options.output_file
 if cmdline_options.ctags:
+    print "build ctags database"
     cmd = ["ctags", "-L", file_list_name]
     subprocess.Popen(cmd).wait()
     print "done, ctags database saved in tags"
