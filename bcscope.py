@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-__VERSION__ = '1.2.1'
+__VERSION__ = '1.2.2'
 __author__ = 'rx.wen218@gmail.com'
 
 import subprocess
@@ -34,7 +34,7 @@ opt_parser.add_option("-k", "--kernel", action="store_true", default=False,
         help="Kernel Mode - don't use /usr/include for #include files. [default: %default]")
 opt_parser.add_option("-q", "--quick", action="store_true", default=False, 
         help="Build an inverted index for quick symbol searching. [default: %default]")
-opt_parser.add_option("-c", "--confirm", action="store_true", default=False, 
+opt_parser.add_option("-c", "--confirm", action="store_false", default=True, 
         help="confirm overwrite existing cscope database without interaction [default: %default]")
 opt_parser.add_option("-p", "--preserve-filelist", action="store_true", default=False, 
         help="don't delete cscope.files after the database has been generated [default: %default]")
