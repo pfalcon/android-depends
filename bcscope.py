@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-__VERSION__ = '1.2.2'
+__VERSION__ = '1.2.3'
 __author__ = 'rx.wen218@gmail.com'
 
 import subprocess
@@ -151,6 +151,9 @@ def find_files(d, pattern, file_list):
                                 print "exclude " + fpath
                             break
                 if not should_exclude:
+                    # get real path of symbolic link
+                    # cscope can't deal with symbolic link
+                    fpath = convert_path(os.path.realpath(fpath))
                     source_files.append(fpath + "\n")
         i = 0
         while i < len(subdirs):
