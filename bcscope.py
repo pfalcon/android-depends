@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-__VERSION__ = '1.2.3'
+__VERSION__ = '1.2.4'
 __author__ = 'rx.wen218@gmail.com'
 
 import subprocess
@@ -137,7 +137,7 @@ include_dirs_from_cfg("./", cmdline_options.input_file)
 def find_files(d, pattern, file_list):
     import re
     source_files = []
-    for (root, subdirs, files) in os.walk(d):
+    for (root, subdirs, files) in os.walk(d, followlinks=True):
         for f in files:
             fpath = os.path.join(root, f)
             if re.match(pattern, fpath):
