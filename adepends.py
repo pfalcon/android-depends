@@ -29,13 +29,21 @@ def generate_dependency_graph(cmd_options):
     dot_file = open(dot_file_path, "w")
     dot_file.write("digraph {\n")
     for (mod_name, mod) in modules.items():
+        if mod_name in cmd_options.ignore:
+            continue
         if cmd_options.module and mod.name in cmd_options.module:
 #highlight target module
             dot_file.write("%s[style=bold,color=\"tomato\",label=\"%s\l%s\"]\n"%(transfer_to_dot_valid(mod.name), mod.name, mod.directory))
         else:
             dot_file.write("%s[label=\"%s\l%s\"]\n"%(transfer_to_dot_valid(mod.name), mod.name, mod.directory))
     for (mod_name, mod) in modules.items():
+        if mod_name in cmd_options.ignore:
+            continue
+        if mod_name in cmd_options.hide_deps:
+            continue
         for dep in mod.depends:
+            if dep in cmd_options.ignore:
+                continue
             dot_file.write("%s->%s\n"%(transfer_to_dot_valid(mod.name), transfer_to_dot_valid(dep)))
     dot_file.write("}\n")
     dot_file.close()
@@ -56,6 +64,10 @@ if __name__ == "__main__":
             help="dot diagram file")
     opt_parser.add_option("-m", "--module", dest="module", action="append",
             help="generate dependency diagram for specified module (can repeat)")
+    opt_parser.add_option("-i", "--ignore", dest="ignore", default=[], action="append",
+            help="ignore module (can repeat)")
+    opt_parser.add_option("-d", "--hide-deps", dest="hide_deps", default=[], action="append",
+            help="don't show module dependencies (can repeat)")
     opt_parser.add_option("-l", "--listmodule", action="store_true", default=False, 
             help="only list modules defined in specified directory [default: %default]")
     (cmdline_options, args) = opt_parser.parse_args()
