@@ -29,7 +29,7 @@ def generate_dependency_graph(cmd_options):
     dot_file = open(dot_file_path, "w")
     dot_file.write("digraph {\n")
     for (mod_name, mod) in modules.items():
-        if cmd_options.module and mod.name == cmd_options.module:
+        if cmd_options.module and mod.name in cmd_options.module:
 #highlight target module
             dot_file.write("%s[style=bold,color=\"tomato\",label=\"%s\l%s\"]\n"%(transfer_to_dot_valid(mod.name), mod.name, mod.directory))
         else:
@@ -54,8 +54,8 @@ if __name__ == "__main__":
                 usage = "%prog [OPTION] [dir_to_parse]")
     opt_parser.add_option("-o", "--output", dest="output_file", 
             help="dot diagram file")
-    opt_parser.add_option("-m", "--module", dest="module",
-            help="only generate dependency diagram for specified module")
+    opt_parser.add_option("-m", "--module", dest="module", action="append",
+            help="generate dependency diagram for specified module (can repeat)")
     opt_parser.add_option("-l", "--listmodule", action="store_true", default=False, 
             help="only list modules defined in specified directory [default: %default]")
     (cmdline_options, args) = opt_parser.parse_args()
@@ -76,7 +76,8 @@ if __name__ == "__main__":
             if not cmdline_options.module:
                 modules = all_modules.pool
             else:
-                add_module_to_source(cmdline_options.module)
+                for m in cmdline_options.module:
+                    add_module_to_source(m)
             generate_dependency_graph(cmdline_options)
     else:
         all_modules = parse_directory(dir_to_parse)
